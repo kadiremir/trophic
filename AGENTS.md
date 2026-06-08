@@ -4,14 +4,15 @@ This file provides guidance to Codex when working in this repository.
 
 ## Mandatory maintenance rule
 
-Whenever any gameplay rule is introduced, removed, or changed, you must update the rule documentation in the same change.
+Whenever any gameplay rule is introduced, removed, or changed, you must update the rule documentation **and the Python tooling** in the same change.
 
 At minimum, update all relevant rule references in:
 - `README.md`
 - `AGENTS.md`
 - engine comments or contracts in `src/game/engine.js`
+- `tools/engine.py` — Python port used by the level generator (see `tools/LEVELGEN.md` sync checklist)
 
-Do not leave rule behavior and rule documentation out of sync.
+Do not leave rule behavior, documentation, or tooling out of sync.
 
 ## Build & Run
 
