@@ -8,7 +8,7 @@ import { onAuthChange, loadProgress, saveProgress } from './src/firebase';
 import { LEVELS } from './src/game/levels';
 
 // Bump this whenever levels change to reset all users' cloud progress.
-const PROGRESS_VERSION = 1;
+const PROGRESS_VERSION = 2;
 
 export default function App() {
   const [screen, setScreen]       = useState('menu');
@@ -93,6 +93,7 @@ export default function App() {
         )}
         {screen === 'game' && (
           <GameScreen
+            key={levelIndex}
             levelIndex={levelIndex}
             onBack={() => setScreen('menu')}
             onComplete={handleComplete}
