@@ -54,7 +54,6 @@ export default function MenuScreen({ unlocked, completed, onSelect }) {
           <View key={ti} style={styles.group}>
             <View style={styles.groupHeader}>
               <Text style={[styles.groupLabel, { color: tier.color }]}>{tier.label}</Text>
-              <Text style={styles.groupChain}>{tier.chain}</Text>
             </View>
 
             {tier.levels.map((li) => {
