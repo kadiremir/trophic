@@ -50,6 +50,6 @@ export async function loadProgress(uid) {
   return snap.data(); // { unlocked, completed }
 }
 
-export async function saveProgress(uid, unlocked, completed) {
-  await setDoc(progressRef(uid), { unlocked, completed: [...completed] });
+export async function saveProgress(uid, unlocked, completed, version) {
+  await setDoc(progressRef(uid), { version, unlocked, completed: [...completed] });
 }

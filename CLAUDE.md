@@ -82,3 +82,11 @@ The `'choosing'` phase handles ambiguous prey selection:
 ```
 
 Grid start positions must not have any predator 8-dir adjacent to its prey (`hasIllegalAdjacency` validates this).
+
+## Progress Persistence & Versioning
+
+Progress (unlocked levels, completed levels) is saved to Firestore only (no AsyncStorage/local cache). Guests (not signed in) always start from level 1. Signing out resets in-memory progress to default.
+
+A `PROGRESS_VERSION` constant in `App.js` is stamped into every Firestore save. On load, if the saved version doesn't match, the data is discarded and the user starts from level 1.
+
+**To reset all users' progress after changing levels:** bump `PROGRESS_VERSION` in `App.js` (e.g. `1` → `2`). Old cloud saves will be ignored on next app load.
