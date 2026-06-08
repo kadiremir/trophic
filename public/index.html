@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>%WEB_TITLE%</title>
+    <link
+      rel="preload"
+      href="fonts/cinzel-decorative-900.ttf"
+      as="font"
+      type="font/ttf"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="fonts/nunito-500.ttf"
+      as="font"
+      type="font/ttf"
+      crossorigin
+    />
+    <style id="trophic-fonts">
+      @font-face {
+        font-family: 'Cinzel Decorative';
+        font-style: normal;
+        font-weight: 900;
+        font-display: block;
+        src: url('fonts/cinzel-decorative-900.ttf') format('truetype');
+      }
+
+      @font-face {
+        font-family: 'Nunito';
+        font-style: normal;
+        font-weight: 500;
+        font-display: block;
+        src: url('fonts/nunito-500.ttf') format('truetype');
+      }
+
+      @keyframes trophic-logo-glow {
+        0%,
+        100% {
+          text-shadow:
+            0 0 20px rgba(0, 229, 195, 0.2),
+            0 2px 4px rgba(0, 0, 0, 0.5);
+          filter: brightness(1);
+        }
+
+        50% {
+          text-shadow:
+            0 0 40px rgba(0, 229, 195, 0.4),
+            0 0 80px rgba(0, 229, 195, 0.15),
+            0 2px 4px rgba(0, 0, 0, 0.5);
+          filter: brightness(1.1);
+        }
+      }
+
+      .trophic-logo-title {
+        animation: trophic-logo-glow 3s ease-in-out infinite;
+        text-shadow:
+          0 0 30px rgba(0, 229, 195, 0.25),
+          0 2px 4px rgba(0, 0, 0, 0.6) !important;
+      }
+    </style>
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: #070b06;
+      }
+
+      body {
+        overflow: hidden;
+      }
+
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+        background: #070b06;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <div id="root"></div>
+  </body>
+</html>

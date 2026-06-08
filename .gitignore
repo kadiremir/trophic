@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.expo/
+.idea/
+.claude/
+npm-debug.log*
+.DS_Store

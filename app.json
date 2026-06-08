@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Trophic",
+    "slug": "trophic",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#070b06"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.trophic.game"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#070b06"
+      },
+      "package": "com.trophic.game"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "experiments": {
+      "baseUrl": "/trophic"
+    },
+    "plugins": []
+  }
+}
