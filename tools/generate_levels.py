@@ -13,7 +13,7 @@ maintainability — you can inspect every metric without re-running analysis.
 
 Generation strategy
 ───────────────────
-1. Pick a tier (0-3) and target difficulty from the explicit 40-100 tier band
+1. Pick a tier (0-3) and target difficulty from the explicit 40-90 tier band
    for the level index.
 2. Place a food chain appropriate for the tier on the 6×6 grid using a
    constraint-aware placer (pieces added one at a time, only to cells that
@@ -49,7 +49,12 @@ from engine import (
     GRID_SIZE, PREY_OF, PREDATOR_OF, PREY_POINTS,
     clone_grid, has_illegal_adjacency, can_reach_objective,
 )
-from difficulty import score_difficulty, find_min_moves, measure_min_moves
+from difficulty import (
+    count_winning_first_moves,
+    score_difficulty,
+    find_min_moves,
+    measure_min_moves,
+)
 
 # ── Output path ────────────────────────────────────────────────────────────────
 
@@ -74,13 +79,13 @@ TIER_META = [
     {'label': 'Dino Peak',     'color': '#6ed3c8', 'chain': 'G->R->F->W->B->D',    'levels': list(range(3 * LEVELS_PER_TIER, 4 * LEVELS_PER_TIER))},
 ]
 
-# ── Difficulty targets (explicit 40 → 100 tier bands across 20 levels) ───────
+# ── Difficulty targets (explicit 40 → 90 tier bands across 20 levels) ────────
 
 TIER_DIFFICULTY_TARGETS = [
-    [40, 44, 47, 51, 54],    # Fox Forest:    40-54
-    [55, 59, 62, 66, 69],    # Wolf Ridge:    55-69
-    [70, 74, 77, 81, 84],    # Bear Mountain: 70-84
-    [85, 89, 93, 96, 100],   # Dino Peak:     85-100
+    [40, 45, 50, 55, 60],    # Fox Forest:    40-60
+    [60, 63, 65, 68, 70],    # Wolf Ridge:    60-70
+    [70, 73, 75, 78, 80],    # Bear Mountain: 70-80
+    [80, 83, 85, 88, 90],    # Dino Peak:     80-90
 ]
 DIFFICULTY_TARGETS = [target for tier_targets in TIER_DIFFICULTY_TARGETS for target in tier_targets]
 TIER_DIFFICULTY_BANDS = [(tier_targets[0], tier_targets[-1]) for tier_targets in TIER_DIFFICULTY_TARGETS]
@@ -252,9 +257,10 @@ def _piece_counts_for_tier(tier: int, difficulty: int, rng: random.Random) -> di
     chain = TIER_CHAIN[tier]
 
     if tier >= 3:
-        # 2-chain dino layouts create wolf/fox/bear adjacency ambiguity → forced choices
-        # → ambiguity_count > 0 → difficulty can exceed 80
-        n_chains = rng.choice([1, 2])
+        # Difficulty 85+ is unreachable on the usual 3-move dino boards unless the
+        # layout creates at least one forced-choice point. In practice that requires
+        # 2 full chains, so don't waste half the attempts on 1-chain boards.
+        n_chains = 2 if difficulty >= 85 else rng.choice([1, 2])
     else:
         # Official level targets now start at 40, so Fox Forest can open with
         # multi-chain boards instead of the old 20-39 single-chain ramp.
@@ -281,6 +287,8 @@ def _tune_budget(
     objective: dict,
     target_difficulty: float,
     rng: random.Random,
+    *,
+    base_metrics: Optional[dict] = None,
 ) -> Optional[tuple[int, dict]]:
     """
     Compute min_moves once, then scan budgets from min_moves to min_moves+MAX_EXTRA
@@ -294,9 +302,11 @@ def _tune_budget(
     where the only way to hit the target difficulty is a budget far above min_moves
     is a bad layout — reject it so the generator retries with a fresh placement.
     """
-    base_metrics = measure_min_moves(grid, objective)
+    base_metrics = base_metrics if base_metrics is not None else measure_min_moves(grid, objective)
     if base_metrics is None:
         return None
+
+    solution_cache: dict[int, tuple[int, int]] = {}
 
     min_moves = base_metrics['min_moves']
     MAX_EXTRA = 12   # absolute scan ceiling
@@ -307,7 +317,14 @@ def _tune_budget(
 
     for extra in range(0, MAX_EXTRA + 1):
         budget = min_moves + extra
-        info   = score_difficulty(grid, objective, budget, min_move_metrics=base_metrics)
+        info   = score_difficulty(
+            grid,
+            objective,
+            budget,
+            min_move_metrics=base_metrics,
+            compute_branching=False,
+            solution_cache=solution_cache,
+        )
         delta  = abs(info['difficulty'] - target_difficulty)
         if delta < best_delta:
             best_delta = delta
@@ -323,7 +340,18 @@ def _tune_budget(
     pool = [(b, i) for b, i, d in candidates if d <= best_delta + 5]
     if not pool:
         pool = [(b, i) for b, i, d in candidates if d == min(d for _, _, d in candidates)]
-    best_budget, best_info = rng.choice(pool)
+    best_budget, _ = rng.choice(pool)
+    precomputed_branching = count_winning_first_moves(
+        grid, objective, base_metrics['min_moves']
+    )
+    best_info = score_difficulty(
+        grid,
+        objective,
+        best_budget,
+        min_move_metrics=base_metrics,
+        precomputed_branching=precomputed_branching,
+        solution_cache=solution_cache,
+    )
     return (best_budget, best_info)
 
 
@@ -536,16 +564,27 @@ def generate_level(
 
         objective = {'type': 'score', 'target': score_target}
 
-        result = _tune_budget(grid, objective, target_diff, rng)
+        base_metrics = measure_min_moves(grid, objective)
+        if base_metrics is None:
+            rejects[_R_UNSOLVABLE] += 1
+            continue
+
+        if base_metrics['min_moves'] < floor:
+            rejects[_R_FLOOR] += 1
+            continue
+
+        result = _tune_budget(
+            grid,
+            objective,
+            target_diff,
+            rng,
+            base_metrics=base_metrics,
+        )
         if result is None:
             rejects[_R_UNSOLVABLE] += 1
             continue
 
         budget, info = result
-
-        if info['min_moves'] is None or info['min_moves'] < floor:
-            rejects[_R_FLOOR] += 1
-            continue
 
         delta = abs(info['difficulty'] - target_diff)
 

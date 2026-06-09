@@ -80,7 +80,7 @@ def measure_board_spread(grid: Grid) -> float:
 
 def measure_min_moves(grid: Grid, objective: dict) -> Optional[dict]:
     """
-    BFS over (grid_state, score) to find the minimum number of player moves needed
+    BFS over grid states to find the minimum number of player moves needed
     to satisfy *objective*, plus cascade statistics for the first optimal path found.
 
     Returns a dict with:
@@ -94,7 +94,10 @@ def measure_min_moves(grid: Grid, objective: dict) -> Optional[dict]:
     Callers that also need cascade metrics (e.g. score_difficulty) should call
     this directly and pass the result as min_move_metrics to avoid a second BFS.
     """
-    start_key = f"{serialize_grid(grid)}|0"
+    # Current score is fully determined by the remaining board contents, so the
+    # grid alone is a sufficient visited key. Including score multiplies the
+    # search space with no extra information.
+    start_key = serialize_grid(grid)
     queue: deque = deque()
     queue.append((grid, 0, 0, 0, 0))   # grid, score, moves, max_casc, total_auto
     visited: set[str] = {start_key}
@@ -136,7 +139,7 @@ def measure_min_moves(grid: Grid, objective: dict) -> Optional[dict]:
                             if new_score + get_remaining_score_potential(branch['grid']) < objective['target']:
                                 continue
 
-                        key = f"{serialize_grid(branch['grid'])}|{new_score}"
+                        key = serialize_grid(branch['grid'])
                         if key not in visited:
                             visited.add(key)
                             queue.append((branch['grid'], new_score, new_moves, new_max_casc, new_total_auto))
@@ -269,6 +272,9 @@ def score_difficulty(
     budget: int,
     *,
     min_move_metrics: Optional[dict] = None,
+    compute_branching: bool = True,
+    precomputed_branching: Optional[int] = None,
+    solution_cache: Optional[dict[int, tuple[int, int]]] = None,
 ) -> dict:
     """
     Computes difficulty in [0, 100] for a level plus all agency / spread metrics.
@@ -276,6 +282,16 @@ def score_difficulty(
     Pass *min_move_metrics* (the dict returned by measure_min_moves) when you have
     already computed it for this grid+objective — saves an entire BFS pass.  If
     omitted, it is computed here.
+
+    Set *compute_branching* to `False` when you only need the difficulty score
+    during intermediate budget tuning; callers can then compute branching once
+    for the final selected budget.
+
+    *precomputed_branching* lets callers reuse the first-move branching factor
+    across multiple budget probes for the same grid/objective.
+
+    *solution_cache* lets callers memoize `(solution_count, ambiguity_count)` by
+    counting budget when scanning nearby move budgets for the same layout.
 
     Returns a dict with:
       difficulty                — float, 0 (trivial) … 100 (max hard)
@@ -331,13 +347,25 @@ def score_difficulty(
         3,
     )
 
-    branching = count_winning_first_moves(grid, objective, min_moves_val)
+    if not compute_branching:
+        branching = 0
+    else:
+        branching = (
+            precomputed_branching
+            if precomputed_branching is not None
+            else count_winning_first_moves(grid, objective, min_moves_val)
+        )
 
     abs_slack   = budget - min_moves_val
     slack_ratio = abs_slack / budget
 
     counting_budget = min(budget, min_moves_val + 4)
-    sol_count, ambig_count = count_solutions(grid, objective, counting_budget)
+    if solution_cache is not None and counting_budget in solution_cache:
+        sol_count, ambig_count = solution_cache[counting_budget]
+    else:
+        sol_count, ambig_count = count_solutions(grid, objective, counting_budget)
+        if solution_cache is not None:
+            solution_cache[counting_budget] = (sol_count, ambig_count)
     sol_count = max(sol_count, 1)
 
     log_max = math.log(MAX_SOLUTIONS + 1)

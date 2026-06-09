@@ -81,19 +81,19 @@ let you audit any level's quality without re-running analysis.
 
 | Tier | Label | Chain | Levels | Target range |
 |---|---|---|---|---|
-| 0 | Fox Forest | G→R→F | 1–5 | 40–54 |
-| 1 | Wolf Ridge | G→R→F→W | 6–10 | 55–69 |
-| 2 | Bear Mountain | G→R→F→W→B | 11–15 | 70–84 |
-| 3 | Dino Peak | G→R→F→W→B→D | 16–20 | 85–100 |
+| 0 | Fox Forest | G→R→F | 1–5 | 40–60 |
+| 1 | Wolf Ridge | G→R→F→W | 6–10 | 60–70 |
+| 2 | Bear Mountain | G→R→F→W→B | 11–15 | 70–80 |
+| 3 | Dino Peak | G→R→F→W→B→D | 16–20 | 80–90 |
 
-Difficulty targets are explicitly split from **40** (level 1) to **100** (level 20):
+Difficulty targets are explicitly split from **40** (level 1) to **90** (level 20):
 
 ```python
 TIER_DIFFICULTY_TARGETS = [
-    [40, 44, 47, 51, 54],    # Fox Forest
-    [55, 59, 62, 66, 69],    # Wolf Ridge
-    [70, 74, 77, 81, 84],    # Bear Mountain
-    [85, 89, 93, 96, 100],   # Dino Peak
+    [40, 45, 50, 55, 60],    # Fox Forest
+    [60, 63, 65, 68, 70],    # Wolf Ridge
+    [70, 73, 75, 78, 80],    # Bear Mountain
+    [80, 83, 85, 88, 90],    # Dino Peak
 ]
 DIFFICULTY_TARGETS = [target for tier_targets in TIER_DIFFICULTY_TARGETS for target in tier_targets]
 TIER_DIFFICULTY_BANDS = [(tier_targets[0], tier_targets[-1]) for tier_targets in TIER_DIFFICULTY_TARGETS]
@@ -176,9 +176,9 @@ For each of 20 levels (index 0–19):
    difficulty 40, and each biome has its own explicit band (see table above).
 
 2. **Piece counts:** Pick 1–2 complete chains of the tier's food chain, plus optional
-   lone grass (for easier levels in tiers 0–2). Dino levels may have 1 or 2 chains
-   (2-chain layouts enable forced-choice ambiguity, pushing difficulty past the ~75
-   ceiling of a single linear chain).
+   lone grass (for easier levels in tiers 0–2). Dino levels may have 1 or 2 chains,
+   but targets in the `85–100` band force **2 full chains** because those slots need
+   forced-choice ambiguity to exceed the practical 1-chain ceiling.
 
 3. **Constraint-aware placement:** Places pieces one at a time, choosing only cells
    that don't violate the no-predator-adjacent-to-prey rule with already-placed pieces.
@@ -197,8 +197,10 @@ For each of 20 levels (index 0–19):
 
 5. **Budget tuning:** `measure_min_moves` is called **once** per layout to get
    `min_moves` and cascade metrics; those metrics are passed into every `score_difficulty`
-   call in the scan loop to avoid redundant BFS work.  Scan `budget = min_moves` to
-   `min_moves + 12`, pick closest to target.  Hard slack cap `MAX_SLACK = 5`.
+   call in the scan loop to avoid redundant BFS work. Solution-count / ambiguity probes
+   are memoized by effective counting budget while scanning `budget = min_moves` to
+   `min_moves + 12`, and the first-move branching factor is deferred until the final
+   chosen budget so it is not recomputed during every probe. Hard slack cap `MAX_SLACK = 5`.
 
 6. **Min-moves floor:** Reject if `min_moves < floor`, where:
 
@@ -216,10 +218,10 @@ For each of 20 levels (index 0–19):
 
    | Tier | Allowed difficulty band |
    |---|---|
-   | 0 | 40–54 |
-   | 1 | 55–69 |
-   | 2 | 70–84 |
-   | 3 | 85–100 |
+   | 0 | 40–60 |
+   | 1 | 60–70 |
+   | 2 | 70–80 |
+   | 3 | 80–90 |
 
    The generator keeps a fallback candidate only if it already satisfies this
    hard band rule, so final output never slips below the intended split.

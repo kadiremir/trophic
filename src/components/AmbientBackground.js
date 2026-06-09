@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Image, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+
+const BACKGROUND_IMAGE_PORTRAIT = require('../../assets/backgrounds/forest-night.png');
+const BACKGROUND_IMAGE_LANDSCAPE = require('../../assets/backgrounds/forest-night-desktop.png');
 
 const STAR_SPECS = Array.from({ length: 40 }, (_, index) => ({
   key: `star-${index}`,
@@ -165,14 +168,19 @@ function FloatingLeaf({ spec }) {
 }
 
 export default function AmbientBackground() {
+  const { width, height } = useWindowDimensions();
   const fireflies = useMemo(() => FIREFLY_SPECS, []);
   const leaves = useMemo(() => LEAF_SPECS, []);
+  const useLandscapeBackground = width >= 960 && width > height;
+  const backgroundImage = useLandscapeBackground ? BACKGROUND_IMAGE_LANDSCAPE : BACKGROUND_IMAGE_PORTRAIT;
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <Image source={backgroundImage} style={styles.backgroundImage} resizeMode="cover" />
+
       <LinearGradient
-        colors={['#020810', '#051520', '#071a18', '#040d09']}
-        locations={[0, 0.3, 0.6, 1]}
+        colors={['rgba(1, 6, 10, 0.52)', 'rgba(3, 16, 22, 0.24)', 'rgba(2, 12, 13, 0.38)', 'rgba(2, 8, 8, 0.58)']}
+        locations={[0, 0.28, 0.62, 1]}
         style={StyleSheet.absoluteFill}
       />
 
@@ -194,47 +202,8 @@ export default function AmbientBackground() {
         ))}
       </View>
 
-      <View style={styles.mountainRange} />
-      <View style={styles.midTreeBand}>
-        {Array.from({ length: 20 }, (_, index) => {
-          const height = 60 + (index % 4) * 25;
-          return (
-            <View
-              key={`tree-mid-${index}`}
-              style={[
-                styles.midTree,
-                {
-                  left: index * 42 + (index % 3) * 10,
-                  borderLeftWidth: 8,
-                  borderRightWidth: 8,
-                  borderBottomWidth: height,
-                },
-              ]}
-            />
-          );
-        })}
-      </View>
-
-      <View style={styles.foregroundTreeBand}>
-        {Array.from({ length: 18 }, (_, index) => {
-          const height = 78 + (index % 5) * 18;
-          return (
-            <View
-              key={`tree-front-${index}`}
-              style={[
-                styles.foregroundTree,
-                {
-                  left: `${index * 5.8}%`,
-                  height,
-                },
-              ]}
-            />
-          );
-        })}
-      </View>
-
       <LinearGradient
-        colors={['rgba(0,0,0,0)', 'rgba(0,229,195,0.03)']}
+        colors={['rgba(0,0,0,0)', 'rgba(0,229,195,0.06)']}
         style={styles.groundFog}
       />
 
@@ -254,6 +223,11 @@ export default function AmbientBackground() {
 }
 
 const styles = StyleSheet.create({
+  backgroundImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
   starLayer: {
     ...StyleSheet.absoluteFillObject,
   },
@@ -261,50 +235,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderRadius: 999,
     backgroundColor: '#ffffff',
-  },
-  mountainRange: {
-    position: 'absolute',
-    left: '-10%',
-    right: '-10%',
-    bottom: '30%',
-    height: '28%',
-    backgroundColor: 'rgba(10, 26, 20, 0.88)',
-    borderTopLeftRadius: 220,
-    borderTopRightRadius: 320,
-    transform: [{ skewY: '-5deg' }],
-  },
-  midTreeBand: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: '14%',
-    height: '34%',
-    opacity: 0.52,
-  },
-  midTree: {
-    position: 'absolute',
-    bottom: 0,
-    width: 0,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: '#081a10',
-  },
-  foregroundTreeBand: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '28%',
-    opacity: 0.74,
-  },
-  foregroundTree: {
-    position: 'absolute',
-    bottom: -12,
-    width: 18,
-    backgroundColor: '#061210',
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    transform: [{ rotate: '8deg' }],
   },
   groundFog: {
     position: 'absolute',
