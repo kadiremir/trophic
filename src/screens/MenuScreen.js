@@ -16,6 +16,7 @@ import {
 import { LEVELS, TIER_META } from '../game/levels';
 import { PAL } from '../game/constants';
 import PieceIcon from '../components/PieceIcon';
+import FoodChainShowcase from '../components/FoodChainShowcase';
 
 export default function MenuScreen({ unlocked, completed, onSelect }) {
   const [showHowToPlay, setShowHowToPlay] = React.useState(false);
@@ -36,18 +37,7 @@ export default function MenuScreen({ unlocked, completed, onSelect }) {
           >
             <Text style={styles.howToPlayText}>How to Play</Text>
           </TouchableOpacity>
-          <View style={styles.heroChain}>
-            {['G', 'R', 'F', 'W', 'B', 'D'].map((token, index, arr) => (
-              <React.Fragment key={token}>
-                <HeroChainPiece token={token} />
-                {index < arr.length - 1 && <FlowArrow compact hero />}
-              </React.Fragment>
-            ))}
-          </View>
-          <Text style={styles.desc}>
-            Move predators onto prey. Prey that wanders into danger gets eaten.
-            {'\n'}Build the chain from grass to apex.
-          </Text>
+          <FoodChainShowcase />
         </View>
 
         {TIER_META.map((tier, ti) => (
