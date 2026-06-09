@@ -3,6 +3,8 @@ import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, SafeAreaView, StatusBar,
 } from 'react-native';
+import LottieAnimation from '../components/LottieAnimation';
+import completedAnimation from '../../assets/completed.json';
 import Grid from '../components/Grid';
 import { LEVELS, TIER_META } from '../game/levels';
 import {
@@ -479,7 +481,12 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
         {phase === 'win' && (
           <View style={styles.overlay}>
             <View style={styles.overlayCard}>
-              <Text style={styles.overlayEmoji}>Win</Text>
+              <LottieAnimation
+                source={completedAnimation}
+                autoPlay={true}
+                loop={false}
+                style={styles.winLottie}
+              />
               <Text style={styles.overlayTitle}>Level Complete!</Text>
               <Text style={[styles.overlayScore, { color: '#4fd04f' }]}>{score} pts</Text>
               {maxCombo >= 2 && (
@@ -709,6 +716,7 @@ const styles = StyleSheet.create({
     borderRadius: 20, padding: 32, alignItems: 'center', width: '85%', maxWidth: 300,
   },
   overlayEmoji: { fontSize: 30, fontWeight: 'bold', color: '#e8dfc0' },
+  winLottie: { width: 120, height: 120, marginBottom: -8 },
   overlayTitle: { fontSize: 24, fontWeight: 'bold', color: '#e8dfc0', marginTop: 10, marginBottom: 4 },
   overlayScore: { fontSize: 20, marginBottom: 4 },
   overlayCombo: { fontSize: 14, color: '#ffd700', marginBottom: 8 },

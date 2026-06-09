@@ -17,9 +17,16 @@ import { LEVELS, TIER_META } from '../game/levels';
 import { PAL } from '../game/constants';
 import PieceIcon from '../components/PieceIcon';
 import FoodChainShowcase from '../components/FoodChainShowcase';
+import LottieAnimation from '../components/LottieAnimation';
+import completedAnimation from '../../assets/completed.json';
+import lockedAnimation from '../../assets/locked.json';
+import newAnimation from '../../assets/new.json';
 
 export default function MenuScreen({ unlocked, completed, onSelect }) {
   const [showHowToPlay, setShowHowToPlay] = React.useState(false);
+
+  // First unlocked level that hasn't been completed yet
+  const nextLevel = LEVELS.findIndex((_, li) => li < unlocked && !completed.has(li));
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -62,14 +69,42 @@ export default function MenuScreen({ unlocked, completed, onSelect }) {
                     done && { borderColor: tier.color, shadowColor: tier.color },
                   ]}
                 >
-                  <Text style={[styles.lvNum, { color: done ? tier.color : '#555' }]}>
-                    {done ? '✓' : lv.id}
-                  </Text>
+                  <View style={styles.lvNumContainer}>
+                    {done ? (
+                      <LottieAnimation
+                        source={completedAnimation}
+                        autoPlay={true}
+                        loop={true}
+                        style={styles.lvDoneLottie}
+                      />
+                    ) : (
+                      <Text style={[styles.lvNum, { color: '#555' }]}>{lv.id}</Text>
+                    )}
+                  </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.lvName}>{lv.name}</Text>
                     <Text style={styles.lvObj}>{lv.objective.label}</Text>
                   </View>
-                  {locked && <Text style={styles.lock}>🔒</Text>}
+                  {locked && (
+                    <View style={styles.lvLockedLottieContainer}>
+                      <LottieAnimation
+                        source={lockedAnimation}
+                        autoPlay={true}
+                        loop={true}
+                        style={styles.lvLockedLottie}
+                      />
+                    </View>
+                  )}
+                  {!locked && !done && li === nextLevel && (
+                    <View style={styles.lvNewLottieContainer}>
+                      <LottieAnimation
+                        source={newAnimation}
+                        autoPlay={true}
+                        loop={true}
+                        style={styles.lvNewLottie}
+                      />
+                    </View>
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -419,7 +454,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#00e5c3',
     letterSpacing: 6,
-    marginTop: 2,
+    marginTop: 10,
     textAlign: 'center',
     fontWeight: '500',
     fontFamily: Platform.select({
@@ -468,10 +503,16 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   lvLocked: { opacity: 0.3 },
-  lvNum: { fontSize: 18, fontWeight: 'bold', width: 26, textAlign: 'center' },
+  lvNumContainer: { width: 26, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center' },
+  lvNum: { fontSize: 18, fontWeight: 'bold', textAlign: 'center' },
+  lvDoneLottie: { position: 'absolute', width: 100, height: 100 },
   lvName: { fontSize: 14, color: '#ccc', fontWeight: '600' },
   lvObj: { fontSize: 11, color: '#555', marginTop: 2 },
   lock: { fontSize: 14, opacity: 0.5 },
+  lvLockedLottieContainer: { width: 24, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center' },
+  lvLockedLottie: { position: 'absolute', width: 48, height: 48 },
+  lvNewLottieContainer: { width: 45, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center' },
+  lvNewLottie: { position: 'absolute', width: 75, height: 75 },
   howToPlayBtn: {
     alignSelf: 'center',
     minWidth: 170,
