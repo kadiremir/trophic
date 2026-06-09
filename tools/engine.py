@@ -44,6 +44,9 @@ PREY_POINTS: dict[str, int] = {
     BEAR:   48,
 }
 
+# Inverse of PREY_OF: what predator eats each token
+PREDATOR_OF: dict[str, str] = {v: k for k, v in PREY_OF.items()}
+
 # Lower number = resolved first
 JUMP_PRIORITY: dict[str, int] = {
     RABBIT: 0,
@@ -81,7 +84,21 @@ def is_one_step(r1: int, c1: int, r2: int, c2: int) -> bool:
 
 
 def get_remaining_score_potential(grid: Grid) -> int:
-    return sum(PREY_POINTS.get(cell, 0) for row in grid for cell in row)
+    """
+    Upper bound on score still earnable from *grid*.
+    Only counts a prey piece when its predator is also present — lone prey with
+    no hunter on the board can never be scored, so including them makes pruning
+    too optimistic and wastes BFS nodes.
+    """
+    present = {cell for row in grid for cell in row if cell is not None}
+    return sum(
+        PREY_POINTS[cell]
+        for row in grid
+        for cell in row
+        if cell is not None
+        and cell in PREY_POINTS
+        and PREDATOR_OF.get(cell) in present
+    )
 
 
 def has_illegal_adjacency(grid: Grid) -> bool:
