@@ -155,12 +155,12 @@ function TrophicHeroBrand() {
     return () => loop.stop();
   }, [glow]);
 
-  const titleGlow = {
+  const titleGlow = Platform.OS !== 'web' ? {
     textShadowRadius: glow.interpolate({
       inputRange: [0, 1],
       outputRange: [20, 42],
     }),
-  };
+  } : {};
 
   return (
     <View style={styles.heroBrand}>
@@ -182,7 +182,7 @@ function TrophicHeroBrand() {
       <Animated.Text
         numberOfLines={1}
         adjustsFontSizeToFit
-        className={Platform.OS === 'web' ? 'trophic-logo-title' : undefined}
+        nativeID={Platform.OS === 'web' ? 'trophic-logo-title' : undefined}
         style={[styles.title, titleGlow]}
       >
         TROPHIC
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 64,
     fontWeight: '900',
-    color: '#e8e4d9',
+    ...(Platform.OS !== 'web' && { color: '#e8e4d9' }),
     letterSpacing: 4,
     lineHeight: 76,
     fontFamily: Platform.select({
@@ -444,9 +444,11 @@ const styles = StyleSheet.create({
       android: 'serif',
       default: 'Georgia',
     }),
-    textShadowColor: 'rgba(0, 229, 195, 0.32)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 20,
+    ...(Platform.OS !== 'web' && {
+      textShadowColor: 'rgba(0, 229, 195, 0.32)',
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 20,
+    }),
     textAlign: 'center',
     textTransform: 'uppercase',
   },
