@@ -13,7 +13,8 @@ maintainability — you can inspect every metric without re-running analysis.
 
 Generation strategy
 ───────────────────
-1. Pick a tier (0-3) and target difficulty (20-100) for the level index.
+1. Pick a tier (0-3) and target difficulty from the explicit 40-100 tier band
+   for the level index.
 2. Place a food chain appropriate for the tier on the 6×6 grid using a
    constraint-aware placer (pieces added one at a time, only to cells that
    don't violate no-predator-adjacent-to-prey).
@@ -64,16 +65,26 @@ TIER_CHAIN = [
     [GRASS, RABBIT, FOX, WOLF, BEAR, DINO],
 ]
 
+LEVELS_PER_TIER = 5
+
 TIER_META = [
-    {'label': 'Fox Forest',    'color': '#ff9824', 'chain': 'G->R->F',             'levels': [0, 1, 2, 3, 4]},
-    {'label': 'Wolf Ridge',    'color': '#8496f0', 'chain': 'G->R->F->W',          'levels': [5, 6, 7, 8, 9]},
-    {'label': 'Bear Mountain', 'color': '#cd8038', 'chain': 'G->R->F->W->B',       'levels': [10, 11, 12, 13, 14]},
-    {'label': 'Dino Peak',     'color': '#6ed3c8', 'chain': 'G->R->F->W->B->D',    'levels': [15, 16, 17, 18, 19]},
+    {'label': 'Fox Forest',    'color': '#ff9824', 'chain': 'G->R->F',             'levels': list(range(0 * LEVELS_PER_TIER, 1 * LEVELS_PER_TIER))},
+    {'label': 'Wolf Ridge',    'color': '#8496f0', 'chain': 'G->R->F->W',          'levels': list(range(1 * LEVELS_PER_TIER, 2 * LEVELS_PER_TIER))},
+    {'label': 'Bear Mountain', 'color': '#cd8038', 'chain': 'G->R->F->W->B',       'levels': list(range(2 * LEVELS_PER_TIER, 3 * LEVELS_PER_TIER))},
+    {'label': 'Dino Peak',     'color': '#6ed3c8', 'chain': 'G->R->F->W->B->D',    'levels': list(range(3 * LEVELS_PER_TIER, 4 * LEVELS_PER_TIER))},
 ]
 
-# ── Difficulty targets (linear 20 → 100 across 20 levels) ─────────────────────
+# ── Difficulty targets (explicit 40 → 100 tier bands across 20 levels) ───────
 
-DIFFICULTY_TARGETS = [round(20 + i * 80 / 19) for i in range(20)]
+TIER_DIFFICULTY_TARGETS = [
+    [40, 44, 47, 51, 54],    # Fox Forest:    40-54
+    [55, 59, 62, 66, 69],    # Wolf Ridge:    55-69
+    [70, 74, 77, 81, 84],    # Bear Mountain: 70-84
+    [85, 89, 93, 96, 100],   # Dino Peak:     85-100
+]
+DIFFICULTY_TARGETS = [target for tier_targets in TIER_DIFFICULTY_TARGETS for target in tier_targets]
+TIER_DIFFICULTY_BANDS = [(tier_targets[0], tier_targets[-1]) for tier_targets in TIER_DIFFICULTY_TARGETS]
+TOTAL_LEVELS = len(DIFFICULTY_TARGETS)
 
 # ── Minimum score targets per tier ────────────────────────────────────────────
 # A score target below these values is trivially meaningless:
@@ -245,6 +256,8 @@ def _piece_counts_for_tier(tier: int, difficulty: int, rng: random.Random) -> di
         # → ambiguity_count > 0 → difficulty can exceed 80
         n_chains = rng.choice([1, 2])
     else:
+        # Official level targets now start at 40, so Fox Forest can open with
+        # multi-chain boards instead of the old 20-39 single-chain ramp.
         n_chains = 1 + (difficulty >= 40)
         n_chains = rng.randint(n_chains, min(n_chains + 1, 2))
 
@@ -417,6 +430,54 @@ def _build_level(
     }
 
 
+def _assign_level_slot(level: dict, level_index: int) -> dict:
+    """
+    Rewrite slot-dependent metadata after final difficulty ordering.
+
+    The level geometry, move budget, objective, and measured difficulty stay
+    untouched; only campaign-facing labels and target metadata are reseated to
+    match the final slot order.
+    """
+    level['id'] = level_index + 1
+    level['name'] = LEVEL_NAMES[level_index]
+    level['hint'] = HINTS[level_index]
+    level['meta']['target_difficulty'] = DIFFICULTY_TARGETS[level_index]
+    return level
+
+
+def _order_levels_by_difficulty(levels: list[dict]) -> list[dict]:
+    """
+    Sort levels by measured difficulty within each tier band, then reseat them
+    into their final campaign slots.
+
+    Hard biome bands guarantee tiers do not overlap (Fox < Wolf < Bear < Dino),
+    so sorting within each tier yields a globally rising campaign curve.
+    """
+    ordered: list[dict] = []
+
+    for tier in range(len(TIER_CHAIN)):
+        tier_levels = [lv for lv in levels if lv['tier'] == tier]
+        if len(tier_levels) != LEVELS_PER_TIER:
+            raise ValueError(
+                f'Tier {tier} expected {LEVELS_PER_TIER} levels, got {len(tier_levels)}'
+            )
+
+        tier_levels.sort(
+            key=lambda lv: (
+                lv['meta']['difficulty'],
+                lv['meta']['min_moves'],
+                lv['moves'],
+                lv['objective']['target'],
+            )
+        )
+
+        base_index = tier * LEVELS_PER_TIER
+        for offset, level in enumerate(tier_levels):
+            ordered.append(_assign_level_slot(level, base_index + offset))
+
+    return ordered
+
+
 # ── Level generation ───────────────────────────────────────────────────────────
 
 # Rejection stage labels used in per-level debug output
@@ -424,6 +485,7 @@ _R_PLACEMENT  = 'place'
 _R_SCORE      = 'score'
 _R_UNSOLVABLE = 'unsolv'
 _R_FLOOR      = 'floor'
+_R_BAND       = 'band'
 _R_DIFF       = 'diff'
 _R_QUALITY    = 'qual'
 
@@ -434,7 +496,7 @@ def generate_level(
     max_outer_tries: int = 200,
 ) -> Optional[dict]:
     """
-    Generate a single level at *level_index* (0-19).
+    Generate a single level at *level_index* within the configured target list.
 
     Tries up to *max_outer_tries* random layouts.  Acceptance thresholds widen
     progressively so the generator never hard-fails on a single level — the
@@ -442,11 +504,12 @@ def generate_level(
     only if nothing solvable was found at all.
     """
     target_diff = DIFFICULTY_TARGETS[level_index]
-    tier        = level_index // 5
+    tier        = level_index // LEVELS_PER_TIER
+    band_min, band_max = TIER_DIFFICULTY_BANDS[tier]
     floor       = _min_moves_floor(target_diff)
 
     rejects = {_R_PLACEMENT: 0, _R_SCORE: 0, _R_UNSOLVABLE: 0,
-               _R_FLOOR: 0, _R_DIFF: 0, _R_QUALITY: 0}
+               _R_FLOOR: 0, _R_BAND: 0, _R_DIFF: 0, _R_QUALITY: 0}
 
     best_candidate: Optional[dict] = None
     best_delta = float('inf')
@@ -486,12 +549,18 @@ def generate_level(
 
         delta = abs(info['difficulty'] - target_diff)
 
+        if not (band_min <= info['difficulty'] <= band_max):
+            rejects[_R_BAND] += 1
+            continue
+
+        # Keep the closest band-valid candidate as the fallback. This preserves
+        # the hard difficulty split even when the full quality gate cannot be met.
+        if delta < best_delta:
+            best_delta     = delta
+            best_candidate = _build_level(level_index, tier, grid, budget, score_target, info)
+
         if delta > diff_tolerance:
             rejects[_R_DIFF] += 1
-            # Track the closest miss in case we need a fallback
-            if delta < best_delta:
-                best_delta     = delta
-                best_candidate = _build_level(level_index, tier, grid, budget, score_target, info)
             continue
 
         if not _passes_quality(info, tier, relax=relax_quality):
@@ -553,11 +622,32 @@ def _build_output(levels: list[dict], seed: int) -> dict:
     }
 
 
+def _print_table_header(index_label: str) -> None:
+    print(f'{index_label:>4}  {"Diff":>6}  {"Target":>6}  {"MinMv":>5}  {"Budget":>6}  '
+          f'{"Sols":>4}  {"Casc":>4}  {"Agcy":>5}  {"Sprd":>5}  {"Brch":>4}')
+    print('-' * 72)
+
+
+def _print_level_table(levels: list[dict], label: str) -> None:
+    print(f'\n{label}\n')
+    _print_table_header('Lvl')
+    for lv in levels:
+        m = lv['meta']
+        print(
+            f'  {lv["id"]:2d}  '
+            f'{m["difficulty"]:6.1f}  {m["target_difficulty"]:6d}  '
+            f'{m["min_moves"]:5d}  {lv["moves"]:6d}  '
+            f'{m["solution_count"]:4d}  {m["max_cascade_depth"]:4d}  '
+            f'{m["agency_ratio"]:5.2f}  {m["mean_pairwise_distance"]:5.2f}  '
+            f'{m["first_move_branching_factor"]:4d}'
+        )
+
+
 # ── CLI ────────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description='Generate 20 Trophic levels and write to src/game/levels.json'
+        description=f'Generate {TOTAL_LEVELS} Trophic levels and write to src/game/levels.json'
     )
     parser.add_argument('--seed',     type=int, default=42,   help='Random seed (default 42)')
     parser.add_argument('--validate', action='store_true',    help='Validate existing levels.json')
@@ -574,13 +664,11 @@ def main() -> None:
     rng    = random.Random(args.seed)
     levels = []
 
-    print(f'\nGenerating 20 levels  (seed={args.seed})\n')
-    print(f'{"Lvl":>3}  {"Diff":>6}  {"Target":>6}  {"MinMv":>5}  {"Budget":>6}  '
-          f'{"Sols":>4}  {"Casc":>4}  {"Agcy":>5}  {"Sprd":>5}  {"Brch":>4}')
-    print('-' * 72)
+    print(f'\nGenerating {TOTAL_LEVELS} levels  (seed={args.seed})\n')
+    _print_table_header('Slot')
 
-    for i in range(20):
-        print(f'  {i+1:2d}  ', end='', flush=True)
+    for i in range(TOTAL_LEVELS):
+        print(f'{i + 1:4d}  ', end='', flush=True)
         lv = generate_level(i, rng)
         if lv is None:
             print('FAILED — cannot continue.')
@@ -595,6 +683,9 @@ def main() -> None:
         )
         levels.append(lv)
 
+    levels = _order_levels_by_difficulty(levels)
+    _print_level_table(levels, 'Final campaign order (sorted by measured difficulty)')
+
     # Final validation pass
     print('\nValidating …')
     all_ok = True
@@ -606,7 +697,7 @@ def main() -> None:
     if not all_ok:
         print('Validation FAILED — levels not written.')
         sys.exit(1)
-    print('All 20 levels valid.')
+    print(f'All {TOTAL_LEVELS} levels valid.')
 
     output = _build_output(levels, args.seed)
     os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)

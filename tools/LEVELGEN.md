@@ -55,8 +55,8 @@ The game reads `src/game/levels.json` directly via `src/game/levels.js`.
       "hint": "Move the fox adjacent to the rabbit to start your first chain.",
       "pieces": [["G", 1, 4], ["R", 0, 2], ["F", 3, 5], ...],
       "meta": {
-        "difficulty": 22.5,
-        "target_difficulty": 20,
+        "difficulty": 41.5,
+        "target_difficulty": 40,
         "min_moves": 2,
         "solution_count": 4,
         "ambiguity_count": 0,
@@ -79,19 +79,33 @@ let you audit any level's quality without re-running analysis.
 
 ## Tier structure
 
-| Tier | Label | Chain | Levels |
-|---|---|---|---|
-| 0 | Fox Forest | G→R→F | 1–5 |
-| 1 | Wolf Ridge | G→R→F→W | 6–10 |
-| 2 | Bear Mountain | G→R→F→W→B | 11–15 |
-| 3 | Dino Peak | G→R→F→W→B→D | 16–20 |
+| Tier | Label | Chain | Levels | Target range |
+|---|---|---|---|---|
+| 0 | Fox Forest | G→R→F | 1–5 | 40–54 |
+| 1 | Wolf Ridge | G→R→F→W | 6–10 | 55–69 |
+| 2 | Bear Mountain | G→R→F→W→B | 11–15 | 70–84 |
+| 3 | Dino Peak | G→R→F→W→B→D | 16–20 | 85–100 |
 
-Difficulty targets are linearly spaced from **20** (level 1) to **100** (level 20):
+Difficulty targets are explicitly split from **40** (level 1) to **100** (level 20):
 
 ```python
-DIFFICULTY_TARGETS = [round(20 + i * 80 / 19) for i in range(20)]
-# [20, 24, 28, 32, 37, 41, 45, 49, 53, 58, 62, 66, 70, 74, 78, 83, 87, 91, 95, 100]
+TIER_DIFFICULTY_TARGETS = [
+    [40, 44, 47, 51, 54],    # Fox Forest
+    [55, 59, 62, 66, 69],    # Wolf Ridge
+    [70, 74, 77, 81, 84],    # Bear Mountain
+    [85, 89, 93, 96, 100],   # Dino Peak
+]
+DIFFICULTY_TARGETS = [target for tier_targets in TIER_DIFFICULTY_TARGETS for target in tier_targets]
+TIER_DIFFICULTY_BANDS = [(tier_targets[0], tier_targets[-1]) for tier_targets in TIER_DIFFICULTY_TARGETS]
 ```
+
+The band for each biome is a hard acceptance rule. For example, Fox Forest
+levels are rejected if their measured difficulty lands below 40 or above 54,
+even if they are otherwise close to the target for that slot.
+
+After generation, the accepted levels are sorted by measured `meta.difficulty`
+within each biome, then reseated into the final campaign slots. This keeps the
+shipped order climbing from easier to harder while preserving the hard biome bands.
 
 ---
 
@@ -157,7 +171,9 @@ cascade from a single move is the payoff of that tier, not a defect.
 
 For each of 20 levels (index 0–19):
 
-1. **Tier and target:** `tier = level_index // 5`, `target_diff = DIFFICULTY_TARGETS[level_index]`.
+1. **Tier and target:** `tier = level_index // LEVELS_PER_TIER`,
+   `target_diff = DIFFICULTY_TARGETS[level_index]`. Fox Forest now starts at
+   difficulty 40, and each biome has its own explicit band (see table above).
 
 2. **Piece counts:** Pick 1–2 complete chains of the tier's food chain, plus optional
    lone grass (for easier levels in tiers 0–2). Dino levels may have 1 or 2 chains
@@ -192,7 +208,23 @@ For each of 20 levels (index 0–19):
    | 21–60 | 2 |
    | 61–100 | 3 |
 
-7. **Progressive tolerance:** Acceptance criteria widen as attempts increase:
+   In practice, the shipped bands now start at 40, so generated campaign levels
+   will use only the last two rows of this table.
+
+7. **Biome band gate:** Reject if measured `difficulty` falls outside the active
+   biome band:
+
+   | Tier | Allowed difficulty band |
+   |---|---|
+   | 0 | 40–54 |
+   | 1 | 55–69 |
+   | 2 | 70–84 |
+   | 3 | 85–100 |
+
+   The generator keeps a fallback candidate only if it already satisfies this
+   hard band rule, so final output never slips below the intended split.
+
+8. **Progressive tolerance:** Acceptance criteria widen as attempts increase:
 
    | Attempt phase | Difficulty tolerance | Quality gate |
    |---|---|---|
@@ -203,7 +235,13 @@ For each of 20 levels (index 0–19):
    On full exhaustion, the best-found candidate is returned with a `[warn]` log rather
    than hard-failing the run.
 
-8. **Quality gate:** Reject if any agency / spread / branching threshold (see table above) is violated.
+9. **Quality gate:** Reject if any agency / spread / branching threshold (see table above) is violated.
+
+10. **Final ordering:** Once all 20 levels are accepted, sort them by measured
+    `difficulty` within each tier, then reassign campaign slots in that order.
+    IDs, names, hints, and `target_difficulty` metadata are rewritten to match
+    the final easier-to-harder sequence. Because tier bands do not overlap, this
+    also yields a globally rising campaign difficulty curve.
 
 Up to **200 outer attempts** per level.  Runtime is typically 1–5 minutes for all 20 levels.
 

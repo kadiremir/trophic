@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import AmbientBackground from './src/components/AmbientBackground';
 import MenuScreen from './src/screens/MenuScreen';
 import GameScreen from './src/screens/GameScreen';
@@ -80,32 +80,54 @@ export default function App() {
   return (
     <View style={styles.root}>
       <AmbientBackground />
-      <View style={styles.authBar}>
-        <AuthButton user={user ?? null} />
-      </View>
-      <View style={styles.screenLayer}>
-        {screen === 'menu' && (
-          <MenuScreen
-            unlocked={unlocked}
-            completed={completed}
-            onSelect={handleSelect}
-          />
-        )}
-        {screen === 'game' && (
-          <GameScreen
-            key={levelIndex}
-            levelIndex={levelIndex}
-            onBack={() => setScreen('menu')}
-            onComplete={handleComplete}
-          />
-        )}
+      <View style={styles.appShell}>
+        <View style={styles.topChrome}>
+          <View style={styles.authBar}>
+            <AuthButton user={user ?? null} />
+          </View>
+        </View>
+        <View style={styles.screenLayer}>
+          {screen === 'menu' && (
+            <MenuScreen
+              unlocked={unlocked}
+              completed={completed}
+              onSelect={handleSelect}
+            />
+          )}
+          {screen === 'game' && (
+            <GameScreen
+              key={levelIndex}
+              levelIndex={levelIndex}
+              onBack={() => setScreen('menu')}
+              onComplete={handleComplete}
+            />
+          )}
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root:        { flex: 1, backgroundColor: '#040d09' },
-  authBar:     { position: 'absolute', top: 16, right: 16, zIndex: 100 },
-  screenLayer: { flex: 1 },
+  root: { flex: 1, backgroundColor: '#040d09' },
+  appShell: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
+  },
+  topChrome: {
+    width: '100%',
+    minHeight: Platform.select({ web: 52, default: 48 }),
+    paddingTop: Platform.select({ web: 6, default: 6 }),
+    paddingHorizontal: 16,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    zIndex: 100,
+  },
+  authBar: {
+    maxWidth: '100%',
+    marginTop: Platform.select({ web: 12, default: 8 }),
+  },
+  screenLayer: { flex: 1, width: '100%' },
 });

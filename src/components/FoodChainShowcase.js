@@ -17,6 +17,33 @@ const ENTRIES = [
   { token: 'D', label: 'Wildfire', accent: '#ffd56f', lat: 0.18, lon: 5.86 },
 ];
 
+const LED_RING_LAYERS = [
+  {
+    rotate: '0deg',
+    opacity: 0.42,
+    top: 'rgba(88, 255, 229, 0.44)',
+    right: 'rgba(97, 168, 255, 0.3)',
+    bottom: 'rgba(255, 79, 194, 0.26)',
+    left: 'rgba(255, 205, 82, 0.5)',
+  },
+  {
+    rotate: '58deg',
+    opacity: 0.3,
+    top: 'rgba(186, 255, 95, 0.28)',
+    right: 'rgba(75, 255, 209, 0.38)',
+    bottom: 'rgba(255, 150, 88, 0.24)',
+    left: 'rgba(255, 95, 163, 0.3)',
+  },
+  {
+    rotate: '122deg',
+    opacity: 0.24,
+    top: 'rgba(255, 214, 116, 0.24)',
+    right: 'rgba(173, 124, 255, 0.24)',
+    bottom: 'rgba(67, 238, 255, 0.22)',
+    left: 'rgba(114, 255, 141, 0.26)',
+  },
+];
+
 function projectPoint(entry, angle, tilt, radiusX, radiusY) {
   const lon = entry.lon + angle;
   const x = Math.cos(entry.lat) * Math.cos(lon);
@@ -36,7 +63,9 @@ function projectPoint(entry, angle, tilt, radiusX, radiusY) {
 export default function FoodChainShowcase() {
   const { width } = useWindowDimensions();
   const panelWidth = Math.min(width - 40, 370);
-  const panelHeight = 215;
+  const panelHeight = Math.min(268, Math.max(232, Math.round(panelWidth * 0.68)));
+  const centerX = panelWidth / 2;
+  const centerY = panelHeight * 0.52;
   const radiusX = Math.min(panelWidth * 0.28, 98);
   const radiusY = radiusX * 0.82;
   const [phase, setPhase] = React.useState(0);
@@ -112,8 +141,8 @@ export default function FoodChainShowcase() {
           {
             width: radiusX * 2,
             height: radiusY * 2,
-            left: panelWidth / 2 - radiusX,
-            top: panelHeight * 0.48 - radiusY,
+            left: centerX - radiusX,
+            top: centerY - radiusY,
           },
         ]}
       >
@@ -132,18 +161,55 @@ export default function FoodChainShowcase() {
             {
               width: radiusX * (2.05 + ringIndex * 0.16),
               height: radiusY * (1.2 + ringIndex * 0.11),
-              left: panelWidth / 2 - (radiusX * (2.05 + ringIndex * 0.16)) / 2,
-              top: panelHeight * 0.48 - (radiusY * (1.2 + ringIndex * 0.11)) / 2,
+              left: centerX - (radiusX * (2.05 + ringIndex * 0.16)) / 2,
+              top: centerY - (radiusY * (1.2 + ringIndex * 0.11)) / 2,
             },
             ringRotation(ringIndex * 55),
           ]}
-        />
+        >
+          {LED_RING_LAYERS.map((layer, layerIndex) => (
+            <View
+              key={layerIndex}
+              style={[
+                styles.whirlRingLayer,
+                {
+                  opacity: layer.opacity,
+                  transform: [{ rotate: layer.rotate }],
+                  borderTopColor: layer.top,
+                  borderRightColor: layer.right,
+                  borderBottomColor: layer.bottom,
+                  borderLeftColor: layer.left,
+                },
+              ]}
+            />
+          ))}
+          <View
+            style={[
+              styles.whirlRingPulse,
+              styles.whirlRingPulsePrimary,
+              {
+                left: `${20 + ringIndex * 18}%`,
+                top: -3 - ringIndex,
+              },
+            ]}
+          />
+          <View
+            style={[
+              styles.whirlRingPulse,
+              styles.whirlRingPulseSecondary,
+              {
+                right: `${16 + ringIndex * 14}%`,
+                bottom: -2,
+              },
+            ]}
+          />
+        </Animated.View>
       ))}
 
       {positioned.map((entry) => {
         const size = 42 + entry.point.depth * 16;
-        const left = panelWidth / 2 + entry.point.x - size / 2;
-        const top = panelHeight * 0.48 + entry.point.y - size / 2;
+        const left = centerX + entry.point.x - size / 2;
+        const top = centerY + entry.point.y - size / 2;
         const glowStrength = 0.25 + entry.point.depth * 0.45;
 
         return (
@@ -244,10 +310,38 @@ const styles = StyleSheet.create({
   whirlRing: {
     position: 'absolute',
     borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  whirlRingLayer: {
+    position: 'absolute',
+    inset: 0,
+    borderRadius: 999,
     borderWidth: 1.1,
-    borderColor: 'rgba(138, 243, 228, 0.14)',
-    borderLeftColor: 'rgba(255, 203, 93, 0.46)',
-    borderRightColor: 'rgba(138, 243, 228, 0.08)',
+    borderTopColor: 'rgba(88, 255, 229, 0.44)',
+    borderRightColor: 'rgba(97, 168, 255, 0.3)',
+    borderBottomColor: 'rgba(255, 79, 194, 0.26)',
+    borderLeftColor: 'rgba(255, 205, 82, 0.5)',
+  },
+  whirlRingPulse: {
+    position: 'absolute',
+    width: 9,
+    height: 9,
+    borderRadius: 999,
+  },
+  whirlRingPulsePrimary: {
+    backgroundColor: 'rgba(118, 255, 230, 0.95)',
+    shadowColor: '#6dffe8',
+    shadowOpacity: 0.8,
+    shadowRadius: 9,
+  },
+  whirlRingPulseSecondary: {
+    width: 7,
+    height: 7,
+    backgroundColor: 'rgba(255, 194, 92, 0.9)',
+    shadowColor: '#ffd37a',
+    shadowOpacity: 0.75,
+    shadowRadius: 7,
   },
   marker: {
     position: 'absolute',
