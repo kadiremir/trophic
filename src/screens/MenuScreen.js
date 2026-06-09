@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 229, 195, 0.24)',
     borderWidth: 1,
     marginTop: 0,
-    marginBottom: 14,
+    marginBottom: 2,
     shadowColor: '#00e5c3',
     shadowOpacity: 0.14,
     shadowRadius: 10,
