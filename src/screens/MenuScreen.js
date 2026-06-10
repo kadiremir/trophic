@@ -13,6 +13,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { LEVELS, TIER_META } from '../game/levels';
 import { PAL, PIECE_IMAGES } from '../game/constants';
 import PieceIcon from '../components/PieceIcon';
@@ -130,6 +131,54 @@ export default function MenuScreen({ unlocked, completed, onSelect, active = tru
   );
 }
 
+// ── CometSweep ───────────────────────────────────────────────────────────────
+function CometSweep({ color }) {
+  const x = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    const anim = Animated.loop(
+      Animated.timing(x, {
+        toValue: 1,
+        duration: 2800,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: true,
+      })
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [x]);
+
+  const translateX = x.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-200, 900],
+  });
+
+  const gradientColors = [
+    'transparent',
+    `${color}66`,  // ~40% opacity
+    `${color}99`,  // ~60% opacity (bright center)
+    `${color}66`,
+    'transparent',
+  ];
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.cometSweep,
+        { transform: [{ translateX }, { skewX: '-20deg' }] },
+      ]}
+    >
+      <LinearGradient
+        colors={gradientColors}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </Animated.View>
+  );
+}
+
 // ── TierCard ────────────────────────────────────────────────────────────────
 function TierCard({
   tier, levels, unlocked, completed, nextLevel,
@@ -147,6 +196,7 @@ function TierCard({
         activeOpacity={0.8}
         style={[styles.tierPill, { borderColor: tier.color, display: isExpanded ? 'none' : 'flex' }]}
       >
+        <CometSweep color={tier.color} />
         <View style={[styles.tierPillIcon, { borderColor: tier.color, backgroundColor: `${tier.color}22` }]}>
           {allLocked
             ? <Text style={styles.tierPillIconText}>🔒</Text>
@@ -583,6 +633,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingLeft: 12,
     paddingRight: 18,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  cometSweep: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: 80,
   },
   tierPillIcon: {
     width: 46,
