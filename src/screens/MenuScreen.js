@@ -19,6 +19,7 @@ import { PAL, PIECE_IMAGES } from '../game/constants';
 import PieceIcon from '../components/PieceIcon';
 import FoodChainShowcase from '../components/FoodChainShowcase';
 import LottieAnimation from '../components/LottieAnimation';
+import HowToPlayButton from '../components/HowToPlayButton';
 import completedAnimation from '../../assets/completed.json';
 import newAnimation from '../../assets/new.json';
 
@@ -82,16 +83,16 @@ export default function MenuScreen({ unlocked, completed, onSelect, active = tru
       >
         <View style={styles.hero}>
           <TrophicHeroBrand />
-          <TouchableOpacity
-            onPress={() => setShowHowToPlay(true)}
-            style={styles.howToPlayBtn}
-          >
-            <Text style={styles.howToPlayText}>How to Play</Text>
-          </TouchableOpacity>
+          <HowToPlayButton onPress={() => setShowHowToPlay(true)} />
           <FoodChainShowcase active={active} />
         </View>
 
-        <View style={{ paddingBottom: 40 }} />
+        <ProgressSummary
+          tiers={TIER_META}
+          levels={LEVELS}
+          unlocked={unlocked}
+          completed={completed}
+        />
 
         {TIER_META.map((tier, ti) => {
           const isExpanded = expandedTiers.has(ti);
@@ -130,6 +131,171 @@ export default function MenuScreen({ unlocked, completed, onSelect, active = tru
     </SafeAreaView>
   );
 }
+
+// ── ProgressSummary ──────────────────────────────────────────────────────────
+function ProgressSummary({ tiers, levels, unlocked, completed }) {
+  const totalCompleted = completed.size;
+  const totalLevels = levels.length;
+
+  const activeTierIndex = tiers.findIndex((tier) =>
+    tier.levels.some((li) => li < unlocked) &&
+    tier.levels.some((li) => !completed.has(li))
+  );
+
+  return (
+    <View style={psStyles.card}>
+      <View style={psStyles.headerRow}>
+        <Text style={psStyles.headerLabel}>OVERALL PROGRESS</Text>
+        <Text style={psStyles.headerCount}>{totalCompleted} / {totalLevels}</Text>
+      </View>
+
+      <View style={psStyles.segmentBar}>
+        {tiers.map((tier, ti) => {
+          const tierLevels = tier.levels;
+          const tierTotal = tierLevels.length;
+          const tierDone = tierLevels.filter((li) => completed.has(li)).length;
+          const tierUnlocked = tierLevels.some((li) => li < unlocked);
+          const fillRatio = tierTotal > 0 ? tierDone / tierTotal : 0;
+
+          return (
+            <View key={ti} style={[psStyles.segmentTrack, ti > 0 && { marginLeft: 3 }]}>
+              <View
+                style={[
+                  psStyles.segmentFill,
+                  {
+                    width: `${fillRatio * 100}%`,
+                    backgroundColor: tierUnlocked ? tier.color : 'rgba(255,255,255,0.12)',
+                    ...(Platform.OS === 'web' && tierUnlocked
+                      ? { boxShadow: `0 0 6px ${tier.color}88` }
+                      : {}),
+                  },
+                ]}
+              />
+            </View>
+          );
+        })}
+      </View>
+
+      <View style={psStyles.pillRow}>
+        {tiers.map((tier, ti) => {
+          const tierLevels = tier.levels;
+          const tierDone = tierLevels.filter((li) => completed.has(li)).length;
+          const tierUnlocked = tierLevels.some((li) => li < unlocked);
+          const isActive = ti === activeTierIndex;
+          const firstWord = tier.label.split(' ')[0];
+
+          if (!tierUnlocked) {
+            return (
+              <View key={ti} style={[psStyles.pill, psStyles.pillLocked]}>
+                <Text style={psStyles.pillLockEmoji}>🔒</Text>
+                <Text style={[psStyles.pillLabel, { color: 'rgba(255,255,255,0.28)' }]}>
+                  {firstWord}
+                </Text>
+              </View>
+            );
+          }
+
+          return (
+            <View
+              key={ti}
+              style={[
+                psStyles.pill,
+                isActive
+                  ? { backgroundColor: `${tier.color}18`, borderColor: `${tier.color}66` }
+                  : { backgroundColor: `${tier.color}0d`, borderColor: `${tier.color}28` },
+              ]}
+            >
+              <Text style={[psStyles.pillCount, { color: tier.color }]}>
+                {tierDone}/{tierLevels.length}
+              </Text>
+              <Text style={[psStyles.pillLabel, { color: isActive ? tier.color : `${tier.color}99` }]}>
+                {firstWord}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const psStyles = StyleSheet.create({
+  card: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+    borderRadius: 14,
+    backgroundColor: 'rgba(8,16,12,0.84)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerLabel: {
+    fontSize: 10,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.35)',
+  },
+  headerCount: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#e8dfc0',
+  },
+  segmentBar: {
+    flexDirection: 'row',
+    height: 5,
+  },
+  segmentTrack: {
+    flex: 1,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    overflow: 'hidden',
+  },
+  segmentFill: {
+    height: '100%',
+    borderRadius: 999,
+  },
+  pillRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  pill: {
+    flex: 1,
+    alignItems: 'center',
+    paddingTop: 6,
+    paddingBottom: 5,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    borderWidth: 1,
+    gap: 2,
+  },
+  pillLocked: {
+    backgroundColor: 'transparent',
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  pillLockEmoji: {
+    fontSize: 10,
+    lineHeight: 13,
+  },
+  pillCount: {
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 13,
+  },
+  pillLabel: {
+    fontSize: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    lineHeight: 11,
+  },
+});
 
 // ── CometSweep ───────────────────────────────────────────────────────────────
 function CometSweep({ color, visible }) {
