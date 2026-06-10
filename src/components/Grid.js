@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { View, StyleSheet, useWindowDimensions, PanResponder, Animated, Easing, Platform } from 'react-native';
 import Cell from './Cell';
 import JumpSprite from './JumpSprite';
+import ScorePopup from './ScorePopup';
 import PieceIcon from './PieceIcon';
 import { GRID_SIZE, PAL } from '../game/constants';
 import { cellKey } from '../game/engine';
@@ -37,6 +38,7 @@ export default function Grid({
   choicePredators,
   jumpingFrom,
   crunchCell,
+  scorePopups = [],
 }) {
   const { width } = useWindowDimensions();
   const gridWidth = Math.min(width - GRID_PADDING * 2, 460 - GRID_PADDING * 2);
@@ -334,6 +336,20 @@ export default function Grid({
           boardOffsetX={boardOffsetX}
         />
       )}
+
+      {scorePopups.map((p) => {
+        const origin = getCellOrigin(p.r, p.c, cellSize, boardOffsetX);
+        return (
+          <ScorePopup
+            key={p.id}
+            pts={p.pts}
+            x={origin.x - CELL_GAP / 2}
+            y={origin.y - CELL_GAP / 2}
+            cellSize={cellSize}
+            color={p.color}
+          />
+        );
+      })}
 
       <View
         ref={boardRef}

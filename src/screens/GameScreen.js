@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, SafeAreaView, StatusBar,
+  TouchableOpacity, SafeAreaView, StatusBar, Animated, Easing,
 } from 'react-native';
 import LottieAnimation from '../components/LottieAnimation';
 import completedAnimation from '../../assets/completed.json';
@@ -19,7 +19,7 @@ import {
   applyForcedChoice,
 } from '../game/engine';
 import PieceIcon from '../components/PieceIcon';
-import { PAL, PIECE_LABELS, TIER_COLORS, PREY_POINTS } from '../game/constants';
+import { PAL, PIECE_LABELS, PREY_POINTS } from '../game/constants';
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 const cellLabel = ([r, c]) => `${String.fromCharCode(65 + c)}${r + 1}`;
@@ -50,7 +50,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
   const selectedRef = useRef(null);
   const mountedRef = useRef(true);
   const phaseRef = useRef('play');
-  const tierColor = TIER_COLORS[level.tier] || '#4fd04f';
+  const tierColor = TIER_META[level.tier]?.color || '#4fd04f';
 
   const setPhaseSync = (p) => { phaseRef.current = p; setPhase(p); };
 
@@ -77,9 +77,9 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     flashTimer.current = setTimeout(() => setFlashMsg(null), 1700);
   };
 
-  const addPopup = (r, c, pts) => {
+  const addPopup = (r, c, pts, color = '#ffd700') => {
     const id = ++popId.current;
-    setPopups((p) => [...p, { id, r, c, pts }]);
+    setPopups((p) => [...p, { id, r, c, pts, color }]);
     setTimeout(() => setPopups((p) => p.filter((x) => x.id !== id)), 1000);
   };
 
@@ -139,7 +139,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     next[fr][fc] = null;
     setDisplayGrid(next);
     setCrunch({ r: tr, c: tc, color: PAL[ev.pred]?.glow || '#fff' });
-    addPopup(tr, tc, ev.pts);
+    addPopup(tr, tc, ev.pts, PAL[ev.prey]?.glow || '#ffd700');
     await delay(300);
     if (!mountedRef.current) return next;
     setCrunch(null);
@@ -419,9 +419,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
             <Text style={styles.goalTarget}>{level.objective.target || '?'}</Text>
             <Text style={styles.goalUnit}>pts</Text>
           </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${pct}%`, backgroundColor: tierColor }]} />
-          </View>
+          <ProgressBar pct={pct} color={tierColor} />
           <Text style={styles.goalCaption}>{level.objective.label}</Text>
         </View>
 
@@ -456,6 +454,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
           choicePredators={choicePredators}
           jumpingFrom={jumpingFrom}
           crunchCell={crunchCell}
+          scorePopups={scorePopups}
         />
 
         {phase === 'choosing' && pendingChoice && (
@@ -500,7 +499,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
         </View>
 
         {phase === 'win' && (
-          <View style={styles.overlay}>
+          <ResultOverlay>
             <View style={styles.overlayCard}>
               <LottieAnimation
                 source={completedAnimation}
@@ -525,11 +524,11 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+          </ResultOverlay>
         )}
 
         {phase === 'lose' && (
-          <View style={styles.overlay}>
+          <ResultOverlay>
             <View style={styles.overlayCard}>
               <Text style={styles.overlayEmoji}>Stop</Text>
               <Text style={styles.overlayTitle}>Out of Moves</Text>
@@ -543,10 +542,79 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+          </ResultOverlay>
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function ProgressBar({ pct, color }) {
+  const fill = useRef(new Animated.Value(pct)).current;
+  const glow = useRef(new Animated.Value(0)).current;
+  const prevPct = useRef(pct);
+
+  useEffect(() => {
+    Animated.timing(fill, {
+      toValue: pct,
+      duration: 500,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+
+    if (pct > prevPct.current) {
+      glow.setValue(0);
+      Animated.sequence([
+        Animated.timing(glow, { toValue: 1, duration: 160, useNativeDriver: false }),
+        Animated.timing(glow, { toValue: 0, duration: 520, useNativeDriver: false }),
+      ]).start();
+    }
+    prevPct.current = pct;
+  }, [pct, fill, glow]);
+
+  const width = fill.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%'],
+    extrapolate: 'clamp',
+  });
+
+  return (
+    <View style={styles.progressTrack}>
+      <Animated.View style={[styles.progressFill, { width, backgroundColor: color }]}>
+        <Animated.View
+          style={[
+            styles.progressGlow,
+            { backgroundColor: '#ffffff', opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0, 0.55] }) },
+          ]}
+        />
+      </Animated.View>
+    </View>
+  );
+}
+
+function ResultOverlay({ children }) {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(anim, {
+      toValue: 1,
+      speed: 12,
+      bounciness: 8,
+      useNativeDriver: true,
+    }).start();
+  }, [anim]);
+
+  const cardScale = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.85, 1],
+  });
+
+  return (
+    <Animated.View style={[styles.overlay, { opacity: anim }]}>
+      <Animated.View style={{ opacity: anim, transform: [{ scale: cardScale }] }}>
+        {children}
+      </Animated.View>
+    </Animated.View>
   );
 }
 
@@ -656,7 +724,14 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: 'hidden',
   },
-  progressFill: { height: '100%', borderRadius: 4 },
+  progressFill: { height: '100%', borderRadius: 4, overflow: 'hidden' },
+  progressGlow: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: 24,
+  },
   goalCaption: {
     marginTop: 8,
     fontSize: 12,
