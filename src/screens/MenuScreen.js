@@ -14,21 +14,20 @@ import {
   Easing,
 } from 'react-native';
 import { LEVELS, TIER_META } from '../game/levels';
-import { PAL } from '../game/constants';
+import { PAL, PIECE_IMAGES } from '../game/constants';
 import PieceIcon from '../components/PieceIcon';
 import FoodChainShowcase from '../components/FoodChainShowcase';
 import LottieAnimation from '../components/LottieAnimation';
 import completedAnimation from '../../assets/completed.json';
 import newAnimation from '../../assets/new.json';
 
-// Derive apex emoji from chain string e.g. "G->R->F->W" → '🐺'
-const APEX_EMOJI = { G: '🌱', R: '🐰', F: '🦊', W: '🐺', B: '🐻', D: '🦖' };
-function apexEmojiForTier(chain) {
+// Derive apex species token from chain string e.g. "G->R->F->W" → 'W'
+function apexTokenForTier(chain) {
   const tokens = chain.split('->');
-  return APEX_EMOJI[tokens[tokens.length - 1]] || '🦊';
+  return tokens[tokens.length - 1] || 'F';
 }
 
-export default function MenuScreen({ unlocked, completed, onSelect }) {
+export default function MenuScreen({ unlocked, completed, onSelect, active = true }) {
   const [showHowToPlay, setShowHowToPlay] = React.useState(false);
 
   // First unlocked level that hasn't been completed yet
@@ -84,7 +83,7 @@ export default function MenuScreen({ unlocked, completed, onSelect }) {
           >
             <Text style={styles.howToPlayText}>How to Play</Text>
           </TouchableOpacity>
-          <FoodChainShowcase />
+          <FoodChainShowcase active={active} />
         </View>
 
         <View style={{ paddingBottom: 40 }} />
@@ -93,7 +92,7 @@ export default function MenuScreen({ unlocked, completed, onSelect }) {
           const isExpanded = expandedTiers.has(ti);
           const allLocked = tier.levels.every((li) => li >= unlocked);
           const completedCount = tier.levels.filter((li) => completed.has(li)).length;
-          const apex = apexEmojiForTier(tier.chain);
+          const apexToken = apexTokenForTier(tier.chain);
 
           return (
             <View
@@ -110,7 +109,7 @@ export default function MenuScreen({ unlocked, completed, onSelect }) {
                 isExpanded={isExpanded}
                 allLocked={allLocked}
                 completedCount={completedCount}
-                apexEmoji={apex}
+                apexToken={apexToken}
                 onToggle={() => toggleTier(ti)}
                 onSelect={onSelect}
               />
@@ -130,7 +129,7 @@ export default function MenuScreen({ unlocked, completed, onSelect }) {
 // ── TierCard ────────────────────────────────────────────────────────────────
 function TierCard({
   tier, levels, unlocked, completed, nextLevel,
-  isExpanded, allLocked, completedCount, apexEmoji,
+  isExpanded, allLocked, completedCount, apexToken,
   onToggle, onSelect,
 }) {
   if (!isExpanded) {
@@ -143,7 +142,9 @@ function TierCard({
       >
         {/* Lock/apex circle */}
         <View style={[styles.tierPillIcon, { borderColor: tier.color, backgroundColor: `${tier.color}22` }]}>
-          <Text style={styles.tierPillIconText}>{allLocked ? '🔒' : apexEmoji}</Text>
+          {allLocked
+            ? <Text style={styles.tierPillIconText}>🔒</Text>
+            : <PieceIcon token={apexToken} size={28} />}
         </View>
 
         {/* Label + status */}
@@ -171,7 +172,9 @@ function TierCard({
         activeOpacity={0.85}
         style={styles.tierCardHeader}
       >
-        <Text style={styles.tierCardHeaderIcon}>{allLocked ? '🔒' : apexEmoji}</Text>
+        {allLocked
+          ? <Text style={styles.tierCardHeaderIcon}>🔒</Text>
+          : <PieceIcon token={apexToken} size={28} />}
         <View style={{ flex: 1 }}>
           <Text style={[styles.tierCardHeaderLabel, { color: tier.color }]}>{tier.label}</Text>
           <Text style={styles.tierCardHeaderSub}>

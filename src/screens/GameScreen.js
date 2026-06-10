@@ -48,7 +48,16 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
   const popId = useRef(0);
   const flashTimer = useRef(null);
   const selectedRef = useRef(null);
+  const mountedRef = useRef(true);
   const tierColor = TIER_COLORS[level.tier] || '#4fd04f';
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      clearTimeout(flashTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (phase !== 'choosing') {
@@ -109,13 +118,17 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     const [fr, fc] = ev.from;
     const [tr, tc] = ev.to;
 
+    if (!mountedRef.current) return currentDisplay;
     setDanger(new Set([cellKey(tr, tc)]));
     await delay(600);
+    if (!mountedRef.current) return currentDisplay;
     setDanger(new Set());
     await delay(50);
 
+    if (!mountedRef.current) return currentDisplay;
     setJumpFrom({ r: fr, c: fc, toR: tr, toC: tc, pred: ev.pred });
     await delay(380);
+    if (!mountedRef.current) return currentDisplay;
     setJumpFrom(null);
 
     const next = cloneGrid(currentDisplay);
@@ -125,6 +138,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     setCrunch({ r: tr, c: tc, color: PAL[ev.pred]?.glow || '#fff' });
     addPopup(tr, tc, ev.pts);
     await delay(300);
+    if (!mountedRef.current) return next;
     setCrunch(null);
 
     return next;
@@ -172,6 +186,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
         { ...option, kind: 'choose', pts: PREY_POINTS[option.prey] || 0 },
         cloneGrid(choice.workingGrid)
       );
+      if (!mountedRef.current) return;
 
       const chosen = applyForcedChoice(choice.workingGrid, option);
       const afterAuto = resolveJumps(chosen.grid);
@@ -180,6 +195,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
 
       for (const ev of afterAuto.events) {
         current = await animateJump(ev, current);
+        if (!mountedRef.current) return;
       }
       current = afterAuto.grid;
 
@@ -247,9 +263,11 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
       let current = cloneGrid(afterMove);
       for (const ev of res.events) {
         current = await animateJump(ev, current);
+        if (!mountedRef.current) return;
       }
       current = res.grid;
 
+      if (!mountedRef.current) return;
       const choice = getForcedChoice(current);
       if (choice) {
         setPendingChoice({

@@ -247,7 +247,7 @@ function GlassOrb({ entry, size, phase }) {
   );
 }
 
-export default function FoodChainShowcase() {
+export default function FoodChainShowcase({ active = true }) {
   const { width } = useWindowDimensions();
   const isWide = width >= 720;
   const panelWidth = Math.min(width - 32, isWide ? 900 : 420);
@@ -257,16 +257,27 @@ export default function FoodChainShowcase() {
   const radiusX = Math.min(panelWidth * (isWide ? 0.39 : 0.32), isWide ? 350 : 128);
   const radiusY = Math.min(panelHeight * 0.34, 76);
   const [phase, setPhase] = React.useState(0);
+  const activeRef = React.useRef(active);
+  activeRef.current = active;
 
   React.useEffect(() => {
     let frame;
     const start = Date.now();
+    let offset = 0;
+    let pauseStart = 0;
     const tick = () => {
-      const elapsed = (Date.now() - start) / 1000;
-      setPhase(elapsed * 0.115);
+      if (activeRef.current) {
+        if (pauseStart > 0) {
+          offset += Date.now() - pauseStart;
+          pauseStart = 0;
+        }
+        const elapsed = (Date.now() - start - offset) / 1000;
+        setPhase(elapsed * 0.115);
+      } else if (pauseStart === 0) {
+        pauseStart = Date.now();
+      }
       frame = requestAnimationFrame(tick);
     };
-
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, []);

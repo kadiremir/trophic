@@ -87,13 +87,14 @@ export default function App() {
           </View>
         </View>
         <View style={styles.screenLayer}>
-          {screen === 'menu' && (
+          <View style={screen !== 'menu' ? styles.hidden : styles.fill} pointerEvents={screen !== 'menu' ? 'none' : 'auto'}>
             <MenuScreen
               unlocked={unlocked}
               completed={completed}
               onSelect={handleSelect}
+              active={screen === 'menu'}
             />
-          )}
+          </View>
           {screen === 'game' && (
             <GameScreen
               key={levelIndex}
@@ -130,4 +131,6 @@ const styles = StyleSheet.create({
     marginTop: Platform.select({ web: 12, default: 8 }),
   },
   screenLayer: { flex: 1, width: '100%' },
+  fill: { flex: 1, width: '100%' },
+  hidden: { position: 'absolute', width: '100%', height: '100%', opacity: 0 },
 });

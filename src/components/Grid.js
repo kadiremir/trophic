@@ -198,8 +198,7 @@ export default function Grid({
     [dragEnabled, endDragAtPoint, finishDrag, moveDragToPoint, onDragEnd, startDragAtPoint]
   );
 
-  const webPointerHandlers = Platform.OS === 'web' && dragEnabled
-    ? {
+  const webPointerHandlers = useMemo(() => Platform.OS !== 'web' || !dragEnabled ? null : ({
         onPointerDown: (event) => {
           const nativeEvent = event.nativeEvent;
           const point = getBoardPointFromPointer(nativeEvent);
@@ -241,8 +240,7 @@ export default function Grid({
           if (dragging.current && onDragEnd) onDragEnd(null, null);
           finishDrag();
         },
-      }
-    : null;
+  }), [dragEnabled, endDragAtPoint, finishDrag, getBoardPointFromPointer, moveDragToPoint, onDragEnd, startDragAtPoint]);
 
   const dragGlowScale = dragPulse.interpolate({
     inputRange: [0, 1],
@@ -361,9 +359,10 @@ export default function Grid({
                 <Cell
                   key={c}
                   cell={cell}
+                  row={r}
+                  col={c}
                   size={cellSize}
-                  onPress={onCellPress ? () => onCellPress(r, c) : undefined}
-                  disabled={!onCellPress}
+                  onCellPress={onCellPress}
                   isSelected={isSel || isChoicePred}
                   isHovered={isHover}
                   isTarget={isTgt && !isHunt}
