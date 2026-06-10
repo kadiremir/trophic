@@ -61,6 +61,30 @@ export const PAL = {
   E: { bg: 'rgba(255,255,255,0.02)', border: 'rgba(255,255,255,0.07)', glow: 'transparent', text: '' },
 };
 
+// ═══ Sticker-book theme ══════════════════════════════════════════════════════
+// Bright die-cut sticker fills + matching dark "ink" for any text/markers
+// drawn on top. Empty cells are dashed "peel here" slots.
+export const STICKER = {
+  G: { fill: '#9be36b', ink: '#3a6b1f' },
+  R: { fill: '#cdd6dd', ink: '#3f4a52' },
+  F: { fill: '#ff9a5a', ink: '#9c4a18' },
+  W: { fill: '#8fb6ff', ink: '#2a4f9c' },
+  B: { fill: '#e0b87a', ink: '#7a4a18' },
+  D: { fill: '#7fe0d0', ink: '#1f6f64' },
+  E: { fill: 'transparent', ink: '#c9b89a' },
+};
+
+export const PAPER = {
+  bg: '#fdf3e3',      // cream page
+  card: '#fffaf0',    // sticker-sheet surface
+  ink: '#5a4a3a',     // primary text
+  inkSoft: '#9a8a78', // muted text
+  border: '#e8dcc4',  // soft page lines
+  white: '#ffffff',   // die-cut border
+  accent: '#ff8aa8',  // playful pink accent
+  gold: '#f4b740',    // peel/select highlight
+};
+
 export const TIER_COLORS = {
   0: '#4fd04f',   // grass/rabbit tier
   1: '#ff9824',   // fox tier

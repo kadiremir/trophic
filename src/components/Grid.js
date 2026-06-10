@@ -4,11 +4,12 @@ import Cell from './Cell';
 import JumpSprite from './JumpSprite';
 import ScorePopup from './ScorePopup';
 import PieceIcon from './PieceIcon';
-import { GRID_SIZE, PAL } from '../game/constants';
+import { GRID_SIZE, STICKER } from '../game/constants';
 import { cellKey } from '../game/engine';
 
 const GRID_PADDING = 12;
 const CELL_GAP = 5;
+const BOARD_INSET = 10;
 
 const getCellFromPoint = (x, y, cellSize) => {
   const cellSpan = cellSize + CELL_GAP;
@@ -256,6 +257,19 @@ export default function Grid({
 
   return (
     <View style={[styles.container, { padding: GRID_PADDING }]}>
+      <View
+        pointerEvents="none"
+        style={[
+          styles.boardPanel,
+          {
+            left: GRID_PADDING + boardOffsetX - BOARD_INSET,
+            top: GRID_PADDING - BOARD_INSET,
+            width: boardSize + BOARD_INSET * 2,
+            height: boardSize + BOARD_INSET * 2,
+          },
+        ]}
+      />
+
       {dragSprite?.piece && (
         <Animated.View
           pointerEvents="none"
@@ -293,8 +307,8 @@ export default function Grid({
             style={[
               styles.dragGlow,
               {
-                backgroundColor: `${(PAL[dragSprite.piece] || PAL.E).glow}26`,
-                borderColor: `${(PAL[dragSprite.piece] || PAL.E).glow}88`,
+                backgroundColor: 'rgba(244,183,64,0.18)',
+                borderColor: 'rgba(244,183,64,0.55)',
                 opacity: dragGlowOpacity,
                 transform: [{ scale: dragGlowScale }],
               },
@@ -304,9 +318,9 @@ export default function Grid({
             style={[
               styles.dragSprite,
               {
-                backgroundColor: (PAL[dragSprite.piece] || PAL.E).bg,
-                borderColor: (PAL[dragSprite.piece] || PAL.E).glow,
-                shadowColor: (PAL[dragSprite.piece] || PAL.E).glow,
+                backgroundColor: (STICKER[dragSprite.piece] || STICKER.E).fill,
+                borderColor: '#ffffff',
+                shadowColor: '#000000',
                 transform: [
                   {
                     scale: dragLift.interpolate({
@@ -406,6 +420,18 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 460,
   },
+  boardPanel: {
+    position: 'absolute',
+    backgroundColor: '#1c1426',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#6a5224',
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
   dragSpriteWrap: {
     position: 'absolute',
     top: 0,
@@ -423,13 +449,13 @@ const styles = StyleSheet.create({
   },
   dragSprite: {
     flex: 1,
-    borderRadius: 14,
-    borderWidth: 2,
+    borderRadius: 16,
+    borderWidth: 4,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    shadowOpacity: 0.45,
-    shadowRadius: 18,
+    shadowOpacity: 0.32,
+    shadowRadius: 16,
     shadowOffset: { width: 0, height: 10 },
     elevation: 18,
   },
@@ -440,7 +466,7 @@ const styles = StyleSheet.create({
     right: 5,
     height: '38%',
     borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
   board: {
     alignSelf: 'center',

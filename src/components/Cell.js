@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
-import { PAL } from '../game/constants';
+import { STICKER, PAPER } from '../game/constants';
 import PieceIcon from './PieceIcon';
 
 function Cell({
@@ -23,35 +23,42 @@ function Cell({
   const handlePress = useCallback(() => {
     if (onCellPress) onCellPress(row, col);
   }, [onCellPress, row, col]);
-  const pal = PAL[cell || 'E'];
 
-  const getBg = () => {
-    if (isDanger) return '#3a0000';
-    if (isChoiceTarget) return '#2a1a00';
-    if (isHovered) return cell ? '#321000' : 'rgba(255, 90, 70, 0.14)';
-    if (isSelected) return pal.bg;
-    if (isHuntTarget) return '#2a0800';
-    if (isTarget) return 'rgba(255,255,255,0.07)';
-    return pal.bg;
+  const sk = STICKER[cell || 'E'];
+  const isEmpty = !cell;
+  // Stickers are slapped down at playful angles; lifted ones straighten out.
+  const lifted = isSelected || isHovered || isCrunch || isChoiceTarget;
+  const restAngle = (row + col) % 2 === 0 ? -4 : 4;
+
+  const getFill = () => {
+    if (isDanger) return '#ff6b6b';
+    if (isChoiceTarget) return PAPER.gold;
+    if (isEmpty) return isTarget ? 'rgba(212,175,55,0.18)' : 'transparent';
+    return sk.fill;
   };
 
   const getBorder = () => {
-    if (isDanger) return { borderColor: '#ff3030', borderWidth: 2 };
-    if (isChoiceTarget) return { borderColor: '#ffcc00', borderWidth: 2 };
-    if (isHovered) return { borderColor: '#ff5a46', borderWidth: 2 };
-    if (isSelected) return { borderColor: '#ffd700', borderWidth: 1.5 };
-    if (isHuntTarget) return { borderColor: '#ff6050', borderWidth: 2 };
-    if (isTarget) return { borderColor: 'rgba(255,255,255,0.3)', borderWidth: 1.5, borderStyle: 'dashed' };
-    return { borderColor: pal.border, borderWidth: 1.5 };
+    if (isDanger) return { borderColor: '#fff', borderWidth: 4, borderStyle: 'solid' };
+    if (isChoiceTarget) return { borderColor: '#fff', borderWidth: 4, borderStyle: 'solid' };
+    if (isSelected || isHovered) return { borderColor: PAPER.gold, borderWidth: 4, borderStyle: 'solid' };
+    if (isHuntTarget) return { borderColor: '#ff5d7a', borderWidth: 4, borderStyle: 'dashed' };
+    if (isEmpty) {
+      return isTarget
+        ? { borderColor: '#d4af37', borderWidth: 3, borderStyle: 'dashed' }
+        : { borderColor: '#5a4a2a', borderWidth: 2, borderStyle: 'dashed' };
+    }
+    return { borderColor: '#fff', borderWidth: 4, borderStyle: 'solid' };
   };
 
   const getShadow = () => {
-    if (isDanger) return { shadowColor: '#ff3030', shadowOpacity: 0.9, shadowRadius: 10, elevation: 8 };
-    if (isChoiceTarget) return { shadowColor: '#ffcc00', shadowOpacity: 0.9, shadowRadius: 12, elevation: 8 };
-    if (isHovered) return { shadowColor: '#ff5a46', shadowOpacity: 0.65, shadowRadius: 10, elevation: 8 };
-    if (isSelected) return { shadowColor: '#ffd700', shadowOpacity: 0.8, shadowRadius: 8, elevation: 6 };
-    if (isCrunch) return { shadowColor: crunchColor || '#fff', shadowOpacity: 1, shadowRadius: 16, elevation: 12 };
-    return {};
+    if (isEmpty && !isTarget) return {};
+    if (isCrunch) {
+      return { shadowColor: crunchColor || '#000', shadowOpacity: 0.5, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 12 };
+    }
+    if (lifted || isHuntTarget) {
+      return { shadowColor: '#000', shadowOpacity: 0.28, shadowRadius: 9, shadowOffset: { width: 0, height: 6 }, elevation: 8 };
+    }
+    return { shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 5, shadowOffset: { width: 0, height: 3 }, elevation: 4 };
   };
 
   const getEmojiScale = () => {
@@ -61,6 +68,9 @@ function Cell({
     if (isChoiceTarget) return 1.1;
     return 1;
   };
+
+  const tileScale = lifted ? 1.07 : 1;
+  const tileAngle = lifted || (isEmpty && !isTarget) ? 0 : restAngle;
 
   const content = (
     <>
@@ -75,7 +85,7 @@ function Cell({
       {cell && !isJumpSrc && !isGhosted && (
         <PieceIcon
           token={cell}
-          size={size * 0.86}
+          size={size * 0.86 * (cell === 'R' || cell === 'F' ? 1.5 : cell === 'G' ? 0.9 : 1)}
           style={{ transform: [{ scale: getEmojiScale() }] }}
         />
       )}
@@ -85,7 +95,7 @@ function Cell({
       )}
 
       {isCrunch && (
-        <View style={[styles.crunchRing, { borderColor: crunchColor || '#fff' }]} />
+        <View style={[styles.crunchRing, { borderColor: crunchColor || PAPER.gold }]} />
       )}
 
       {isHuntTarget && !cell && (
@@ -96,7 +106,12 @@ function Cell({
 
   const sharedStyle = [
     styles.cell,
-    { width: size, height: size, backgroundColor: getBg() },
+    {
+      width: size,
+      height: size,
+      backgroundColor: getFill(),
+      transform: [{ rotate: `${tileAngle}deg` }, { scale: tileScale }],
+    },
     isGhosted && styles.ghostedCell,
     getBorder(),
     getShadow(),
@@ -109,7 +124,7 @@ function Cell({
   return (
     <TouchableOpacity
       onPress={handlePress}
-      activeOpacity={0.75}
+      activeOpacity={0.8}
       style={sharedStyle}
     >
       {content}
@@ -121,55 +136,57 @@ export default React.memo(Cell);
 
 const styles = StyleSheet.create({
   cell: {
-    borderRadius: 12,
+    borderRadius: 16,
     margin: 2.5,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    overflow: 'hidden',
   },
   ghostedCell: {
-    opacity: 0.42,
+    opacity: 0.4,
     borderStyle: 'dashed',
   },
   ghostMarker: {
     width: '34%',
     height: '34%',
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderColor: 'rgba(0,0,0,0.14)',
   },
   skull: {
     position: 'absolute',
-    top: 2,
+    top: 1,
     right: 4,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: 'bold',
-    color: '#ffd8d8',
-    opacity: 0.9,
+    color: '#8a1414',
+    zIndex: 2,
   },
   choiceArrow: {
     position: 'absolute',
-    top: 2,
-    right: 4,
-    fontSize: 10,
+    top: 1,
+    right: 5,
+    fontSize: 12,
     fontWeight: 'bold',
-    color: '#ffe999',
+    color: '#8a5a00',
+    zIndex: 2,
   },
   crunchRing: {
     position: 'absolute',
-    top: -4,
-    left: -4,
-    right: -4,
-    bottom: -4,
-    borderRadius: 14,
+    top: -5,
+    left: -5,
+    right: -5,
+    bottom: -5,
+    borderRadius: 18,
     borderWidth: 3,
-    opacity: 0.9,
+    borderStyle: 'dashed',
+    opacity: 0.95,
   },
   crosshair: {
-    fontSize: 14,
-    color: '#ff6050',
-    opacity: 0.6,
+    fontSize: 16,
+    color: '#ff5d7a',
+    fontWeight: 'bold',
+    opacity: 0.7,
   },
 });

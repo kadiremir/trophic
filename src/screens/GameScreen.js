@@ -18,8 +18,7 @@ import {
   getForcedChoice,
   applyForcedChoice,
 } from '../game/engine';
-import PieceIcon from '../components/PieceIcon';
-import { PAL, PIECE_LABELS, PREY_POINTS } from '../game/constants';
+import { PAL, PAPER, PIECE_LABELS, PREY_POINTS } from '../game/constants';
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 const cellLabel = ([r, c]) => `${String.fromCharCode(65 + c)}${r + 1}`;
@@ -380,7 +379,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
       >
         <View style={styles.header}>
           <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-            <Text style={styles.backText}>{'<'}</Text>
+            <View style={styles.backChevron} />
           </TouchableOpacity>
           <View style={{ alignItems: 'center' }}>
             <Text style={[styles.tierTag, { color: tierColor }]}>
@@ -390,9 +389,9 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
           </View>
           <TouchableOpacity
             onPress={() => setShowHint((h) => !h)}
-            style={[styles.backBtn, showHint && { borderColor: '#ffd700' }]}
+            style={[styles.backBtn, showHint && styles.backBtnActive]}
           >
-            <Text style={[styles.backText, showHint && { color: '#ffd700' }]}>i</Text>
+            <Text style={[styles.backText, showHint && { color: '#1a1422' }]}>i</Text>
           </TouchableOpacity>
         </View>
 
@@ -403,15 +402,15 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
         )}
 
         <View style={styles.statsRow}>
-          <StatBox label="Score" value={score} color="#4fd04f" />
-          <StatBox label="Moves" value={moves} color={moves <= 2 ? '#ff5555' : '#86c8ff'} />
-          <StatBox label="Combo" value={maxCombo > 0 ? `x${maxCombo}` : '-'} color="#ffd700" />
+          <StatBox label="Score" value={score} color="#e8d9a8" />
+          <StatBox label="Moves" value={moves} color={moves <= 2 ? '#e07a6a' : '#e8d9a8'} />
+          <StatBox label="Combo" value={maxCombo > 0 ? `x${maxCombo}` : '-'} color="#d4af37" />
         </View>
 
         <View style={styles.goalCard}>
           <View style={styles.goalHeader}>
             <Text style={styles.goalEyebrow}>Target Score</Text>
-            <Text style={[styles.goalPct, { color: tierColor }]}>{pct}%</Text>
+            <Text style={styles.goalPct}>{pct}%</Text>
           </View>
           <View style={styles.goalValueRow}>
             <Text style={styles.goalNow}>{score}</Text>
@@ -419,7 +418,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
             <Text style={styles.goalTarget}>{level.objective.target || '?'}</Text>
             <Text style={styles.goalUnit}>pts</Text>
           </View>
-          <ProgressBar pct={pct} color={tierColor} />
+          <ProgressBar pct={pct} color="#d4af37" />
           <Text style={styles.goalCaption}>{level.objective.label}</Text>
         </View>
 
@@ -474,17 +473,6 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
           </View>
         )}
 
-        <View style={styles.chainRow}>
-          {['G', 'R', 'F', 'W', 'B', 'D'].slice(0, level.tier + 2).map((token, i, arr) => (
-            <View key={token} style={styles.chainItem}>
-              <View style={[styles.chainBadge, { backgroundColor: PAL[token].bg, borderColor: PAL[token].border }]}>
-                <PieceIcon token={token} size={26} />
-              </View>
-              {i < arr.length - 1 && <Text style={styles.chainArrow}>{'->'}</Text>}
-            </View>
-          ))}
-        </View>
-
         <View style={styles.ctrlRow}>
           <TouchableOpacity
             onPress={undo}
@@ -508,18 +496,18 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
                 style={styles.winLottie}
               />
               <Text style={styles.overlayTitle}>Level Complete!</Text>
-              <Text style={[styles.overlayScore, { color: '#4fd04f' }]}>{score} pts</Text>
+              <Text style={[styles.overlayScore, { color: '#3a6b1f' }]}>{score} pts</Text>
               {maxCombo >= 2 && (
                 <Text style={styles.overlayCombo}>Best chain: x{maxCombo}</Text>
               )}
               <View style={styles.overlayBtns}>
-                <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#256b25' }]} onPress={onComplete}>
+                <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#8fe06f' }]} onPress={onComplete}>
                   <Text style={styles.overlayBtnText}>Next Level</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#1a2a1a' }]} onPress={reset}>
+                <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#ffd98a' }]} onPress={reset}>
                   <Text style={styles.overlayBtnText}>Replay</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#222' }]} onPress={onBack}>
+                <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#efe3cb' }]} onPress={onBack}>
                   <Text style={styles.overlayBtnText}>Level Select</Text>
                 </TouchableOpacity>
               </View>
@@ -532,12 +520,12 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
             <View style={styles.overlayCard}>
               <Text style={styles.overlayEmoji}>Stop</Text>
               <Text style={styles.overlayTitle}>Out of Moves</Text>
-              <Text style={[styles.overlayScore, { color: '#888' }]}>{score} / {level.objective.target || '?'}</Text>
+              <Text style={[styles.overlayScore, { color: PAPER.inkSoft }]}>{score} / {level.objective.target || '?'}</Text>
               <View style={styles.overlayBtns}>
-                <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#6e1a1a' }]} onPress={reset}>
+                <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#ff9a9a' }]} onPress={reset}>
                   <Text style={styles.overlayBtnText}>Try Again</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#222' }]} onPress={onBack}>
+                <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#efe3cb' }]} onPress={onBack}>
                   <Text style={styles.overlayBtnText}>Level Select</Text>
                 </TouchableOpacity>
               </View>
@@ -636,35 +624,45 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6,
   },
   backBtn: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
-    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6,
+    backgroundColor: '#1c1426',
+    borderColor: '#d4af37', borderWidth: 2,
+    borderRadius: 17, width: 44, height: 44, alignItems: 'center', justifyContent: 'center',
   },
-  backText: { color: '#888', fontSize: 15 },
-  tierTag: { fontSize: 9, letterSpacing: 3, textTransform: 'uppercase' },
-  levelName: { fontSize: 16, color: '#e8dfc0', fontWeight: 'bold', marginTop: 2 },
+  backBtnActive: { backgroundColor: '#d4af37' },
+  backText: { color: '#d4af37', fontSize: 16, fontWeight: 'bold' },
+  backChevron: {
+    width: 13, height: 13,
+    borderLeftWidth: 4, borderBottomWidth: 4,
+    borderColor: '#d4af37',
+    borderBottomLeftRadius: 4,
+    transform: [{ rotate: '45deg' }],
+    marginLeft: 4,
+  },
+  tierTag: { fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: '#b86a2a', fontWeight: 'bold' },
+  levelName: { fontSize: 16, color: '#f0e8d0', fontWeight: 'bold', marginTop: 2 },
   hintBox: {
-    backgroundColor: 'rgba(255,215,0,0.06)', borderColor: 'rgba(255,215,0,0.22)',
-    borderWidth: 1, borderRadius: 10, padding: 10, marginHorizontal: 16, marginBottom: 6,
+    backgroundColor: '#fff7df', borderColor: '#ffffff',
+    borderWidth: 3, borderRadius: 14, padding: 10, marginHorizontal: 16, marginBottom: 6,
+    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 5, shadowOffset: { width: 0, height: 3 }, elevation: 3,
   },
-  hintText: { fontSize: 12, color: '#e8d080', lineHeight: 18 },
+  hintText: { fontSize: 12, color: '#8a6a2a', lineHeight: 18 },
   statsRow: {
     flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 6,
   },
   statBox: {
-    flex: 1, backgroundColor: 'rgba(255,255,255,0.03)',
-    borderColor: 'rgba(255,255,255,0.07)', borderWidth: 1,
-    borderRadius: 10, paddingVertical: 7, alignItems: 'center',
+    flex: 1, backgroundColor: '#1c1426',
+    borderColor: '#6a5224', borderWidth: 1,
+    borderRadius: 12, paddingVertical: 9, alignItems: 'center',
   },
   statValue: { fontSize: 20, fontWeight: 'bold' },
-  statLabel: { fontSize: 9, color: '#555', letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 3 },
+  statLabel: { fontSize: 9, color: '#a8924a', letterSpacing: 2, textTransform: 'uppercase', marginTop: 3 },
   goalCard: {
     marginHorizontal: 16,
     marginBottom: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderColor: 'rgba(255,255,255,0.09)',
+    backgroundColor: '#1c1426',
+    borderColor: '#6a5224',
     borderWidth: 1,
     borderRadius: 14,
   },
@@ -676,13 +674,14 @@ const styles = StyleSheet.create({
   },
   goalEyebrow: {
     fontSize: 10,
-    color: '#7d836f',
-    letterSpacing: 1.6,
+    color: '#c9a94a',
+    letterSpacing: 2.4,
     textTransform: 'uppercase',
   },
   goalPct: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 'bold',
+    color: '#d4af37',
   },
   goalValueRow: {
     flexDirection: 'row',
@@ -692,39 +691,41 @@ const styles = StyleSheet.create({
   goalNow: {
     fontSize: 30,
     lineHeight: 32,
-    color: '#f5f0dd',
+    color: '#f0e6c8',
     fontWeight: 'bold',
   },
   goalDivider: {
     fontSize: 20,
     lineHeight: 24,
-    color: '#6e735f',
+    color: '#9a8454',
     marginHorizontal: 6,
     marginBottom: 3,
   },
   goalTarget: {
     fontSize: 24,
     lineHeight: 28,
-    color: '#b8b29a',
+    color: '#9a8454',
     fontWeight: '700',
     marginBottom: 1,
   },
   goalUnit: {
     fontSize: 12,
-    color: '#7d836f',
+    color: '#9a8454',
     marginLeft: 8,
     marginBottom: 4,
     textTransform: 'uppercase',
     letterSpacing: 1.1,
   },
   progressTrack: {
-    height: 8,
+    height: 10,
     width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: '#2a2238',
     borderRadius: 999,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#6a5224',
   },
-  progressFill: { height: '100%', borderRadius: 4, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 999, overflow: 'hidden' },
   progressGlow: {
     position: 'absolute',
     top: 0,
@@ -735,88 +736,72 @@ const styles = StyleSheet.create({
   goalCaption: {
     marginTop: 8,
     fontSize: 12,
-    color: '#9ca18f',
+    color: '#9a8454',
   },
   flash: {
-    alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.9)',
-    borderWidth: 1, borderRadius: 20, paddingHorizontal: 22, paddingVertical: 9, marginBottom: 4,
+    alignSelf: 'center', backgroundColor: PAPER.card,
+    borderWidth: 3, borderColor: '#ffffff', borderRadius: 20, paddingHorizontal: 22, paddingVertical: 9, marginBottom: 4,
+    shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 4,
   },
   flashText: { fontSize: 14, fontWeight: 'bold' },
-  instr: { fontSize: 11, color: '#666', textAlign: 'center', marginBottom: 4, minHeight: 18 },
+  instr: { fontSize: 11, color: '#d8d2bd', textAlign: 'center', marginBottom: 4, minHeight: 18 },
   choiceBox: {
     marginHorizontal: 16,
     marginTop: 10,
-    backgroundColor: 'rgba(255,204,0,0.08)',
-    borderColor: 'rgba(255,204,0,0.25)',
-    borderWidth: 1,
-    borderRadius: 12,
+    backgroundColor: '#fff7df',
+    borderColor: '#ffffff',
+    borderWidth: 3,
+    borderRadius: 16,
     padding: 12,
     gap: 8,
+    shadowColor: '#000', shadowOpacity: 0.13, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 3,
   },
   choiceTitle: {
-    color: '#ffe08a',
+    color: '#a8741a',
     fontSize: 13,
     fontWeight: 'bold',
   },
   choiceBtn: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1,
-    borderRadius: 10,
+    backgroundColor: PAPER.card,
+    borderColor: '#ffffff',
+    borderWidth: 2,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   choiceBtnText: {
-    color: '#f2ead0',
+    color: PAPER.ink,
     fontSize: 12,
   },
-  chainRow: {
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-    paddingVertical: 8, opacity: 0.75, flexWrap: 'wrap', paddingHorizontal: 16,
-  },
-  chainItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 2,
-  },
-  chainBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chainArrow: {
-    marginHorizontal: 8,
-    color: '#ccc',
-    fontSize: 16,
-    fontWeight: '700',
-  },
   ctrlRow: {
-    flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 8,
+    flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 24,
   },
   ctrlBtn: {
-    flex: 1, backgroundColor: 'rgba(255,255,255,0.04)',
-    borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
-    borderRadius: 10, paddingVertical: 9, alignItems: 'center',
+    flex: 1, backgroundColor: '#1c1426',
+    borderColor: '#6a5224', borderWidth: 1,
+    borderRadius: 12, paddingVertical: 11, alignItems: 'center',
   },
-  ctrlText: { color: '#999', fontSize: 13 },
+  ctrlText: { color: '#d4af37', fontSize: 13, fontWeight: 'bold', letterSpacing: 1.5 },
   overlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    backgroundColor: 'rgba(90,74,58,0.55)',
     alignItems: 'center', justifyContent: 'center', zIndex: 100,
   },
   overlayCard: {
-    backgroundColor: '#0a0f08', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
-    borderRadius: 20, padding: 32, alignItems: 'center', width: '85%', maxWidth: 300,
+    backgroundColor: PAPER.card, borderColor: '#ffffff', borderWidth: 5,
+    borderRadius: 24, padding: 32, alignItems: 'center', width: '85%', maxWidth: 300,
+    shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 16, shadowOffset: { width: 0, height: 10 }, elevation: 16,
   },
-  overlayEmoji: { fontSize: 30, fontWeight: 'bold', color: '#e8dfc0' },
+  overlayEmoji: { fontSize: 30, fontWeight: 'bold', color: PAPER.ink },
   winLottie: { width: 120, height: 120, marginBottom: -8 },
-  overlayTitle: { fontSize: 24, fontWeight: 'bold', color: '#e8dfc0', marginTop: 10, marginBottom: 4 },
-  overlayScore: { fontSize: 20, marginBottom: 4 },
-  overlayCombo: { fontSize: 14, color: '#ffd700', marginBottom: 8 },
+  overlayTitle: { fontSize: 24, fontWeight: 'bold', color: PAPER.ink, marginTop: 10, marginBottom: 4 },
+  overlayScore: { fontSize: 20, marginBottom: 4, fontWeight: 'bold' },
+  overlayCombo: { fontSize: 14, color: '#c98a2e', marginBottom: 8 },
   overlayBtns: { width: '100%', gap: 8, marginTop: 18 },
-  overlayBtn: { borderRadius: 11, paddingVertical: 11, alignItems: 'center' },
-  overlayBtnText: { color: '#fff', fontSize: 14 },
+  overlayBtn: {
+    borderRadius: 14, paddingVertical: 11, alignItems: 'center',
+    borderWidth: 3, borderColor: '#ffffff',
+    shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 5, shadowOffset: { width: 0, height: 3 }, elevation: 3,
+  },
+  overlayBtnText: { color: '#5a4a3a', fontSize: 14, fontWeight: 'bold' },
 });
