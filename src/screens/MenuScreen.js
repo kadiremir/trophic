@@ -47,14 +47,18 @@ export default function MenuScreen({ unlocked, completed, onSelect, active = tru
   }, [unlocked, completed]);
   const scrollRef = React.useRef(null);
   const tierYs = React.useRef({});
+  const toggleLock = React.useRef(false);
 
   const toggleTier = (ti) => {
+    if (toggleLock.current) return;
+    toggleLock.current = true;
+    setTimeout(() => { toggleLock.current = false; }, 400);
+
     setExpandedTiers((prev) => {
       const next = new Set(prev);
       const wasExpanded = next.has(ti);
       wasExpanded ? next.delete(ti) : next.add(ti);
       if (!wasExpanded) {
-        // Scroll so the expanded tier is visible
         setTimeout(() => {
           const y = tierYs.current[ti];
           if (y != null && scrollRef.current) {
@@ -132,22 +136,22 @@ function TierCard({
   isExpanded, allLocked, completedCount, apexToken,
   onToggle, onSelect,
 }) {
-  if (!isExpanded) {
-    // Collapsed pill
-    return (
+  // Both layouts stay mounted at all times — toggling display:none instead of
+  // unmounting prevents Lottie from being destroyed and re-initialized on every
+  // open/close, which caused the browser to freeze on rapid taps.
+  return (
+    <View>
+      {/* Collapsed pill — hidden when expanded */}
       <TouchableOpacity
         onPress={onToggle}
         activeOpacity={0.8}
-        style={[styles.tierPill, { borderColor: tier.color }]}
+        style={[styles.tierPill, { borderColor: tier.color, display: isExpanded ? 'none' : 'flex' }]}
       >
-        {/* Lock/apex circle */}
         <View style={[styles.tierPillIcon, { borderColor: tier.color, backgroundColor: `${tier.color}22` }]}>
           {allLocked
             ? <Text style={styles.tierPillIconText}>🔒</Text>
             : <PieceIcon token={apexToken} size={28} />}
         </View>
-
-        {/* Label + status */}
         <View style={{ flex: 1 }}>
           <Text style={[styles.tierPillLabel, { color: tier.color }]}>{tier.label}</Text>
           <Text style={styles.tierPillSub}>
@@ -156,89 +160,80 @@ function TierCard({
               : `${completedCount}/${tier.levels.length} completed`}
           </Text>
         </View>
-
-        {/* Chevron */}
         <Text style={[styles.tierChevron, { color: `${tier.color}aa` }]}>›</Text>
       </TouchableOpacity>
-    );
-  }
 
-  // Expanded — "Comic Bold" card
-  return (
-    <View style={[styles.tierCardExpanded, { backgroundColor: tier.color }]}>
-      {/* Black header bar */}
-      <TouchableOpacity
-        onPress={onToggle}
-        activeOpacity={0.85}
-        style={styles.tierCardHeader}
-      >
-        {allLocked
-          ? <Text style={styles.tierCardHeaderIcon}>🔒</Text>
-          : <PieceIcon token={apexToken} size={28} />}
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.tierCardHeaderLabel, { color: tier.color }]}>{tier.label}</Text>
-          <Text style={styles.tierCardHeaderSub}>
-            {allLocked
-              ? `${tier.levels.length} levels locked`
-              : `${completedCount}/${tier.levels.length} completed`}
-          </Text>
+      {/* Expanded card — hidden when collapsed */}
+      <View style={[styles.tierCardExpanded, { backgroundColor: tier.color, display: isExpanded ? 'flex' : 'none' }]}>
+        <TouchableOpacity
+          onPress={onToggle}
+          activeOpacity={0.85}
+          style={styles.tierCardHeader}
+        >
+          {allLocked
+            ? <Text style={styles.tierCardHeaderIcon}>🔒</Text>
+            : <PieceIcon token={apexToken} size={28} />}
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.tierCardHeaderLabel, { color: tier.color }]}>{tier.label}</Text>
+            <Text style={styles.tierCardHeaderSub}>
+              {allLocked
+                ? `${tier.levels.length} levels locked`
+                : `${completedCount}/${tier.levels.length} completed`}
+            </Text>
+          </View>
+          <Text style={styles.tierCardChevronOpen}>›</Text>
+        </TouchableOpacity>
+
+        <View style={styles.tierCardRows}>
+          {tier.levels.map((li, rowIdx) => {
+            const lv = levels[li];
+            const locked = li >= unlocked;
+            const done = completed.has(li);
+            const isNew = !done && !locked && li === nextLevel;
+
+            return (
+              <TouchableOpacity
+                key={lv.id}
+                disabled={locked}
+                onPress={() => !locked && onSelect(li)}
+                activeOpacity={0.75}
+                style={[
+                  styles.lvRowCard,
+                  { transform: [{ rotate: rowIdx % 2 === 0 ? '0.3deg' : '-0.3deg' }] },
+                  locked && styles.lvRowCardLocked,
+                ]}
+              >
+                <View style={[
+                  styles.lvRowNum,
+                  {
+                    backgroundColor: done ? '#1a1a1a' : locked ? '#ddd' : tier.color,
+                    borderColor: '#1a1a1a',
+                  },
+                ]}>
+                  <Text style={[styles.lvRowNumText, { color: done ? tier.color : locked ? '#aaa' : '#fff' }]}>
+                    {done ? '✓' : lv.id}
+                  </Text>
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.lvRowName, locked && { color: '#aaa' }]}>{lv.name}</Text>
+                  <Text style={[styles.lvRowObj, locked && { color: '#ccc' }]}>{lv.objective.label}</Text>
+                </View>
+
+                {locked && (
+                  <View style={styles.lvRowLottieContainer}>
+                    <Text style={styles.lvRowLockIcon}>🔒</Text>
+                  </View>
+                )}
+                {isNew && (
+                  <View style={styles.lvRowNewBadge}>
+                    <LottieAnimation source={newAnimation} autoPlay loop style={styles.lvRowLottieNew} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
-        <Text style={styles.tierCardChevronOpen}>›</Text>
-      </TouchableOpacity>
-
-      {/* Level rows */}
-      <View style={styles.tierCardRows}>
-        {tier.levels.map((li, rowIdx) => {
-          const lv = levels[li];
-          const locked = li >= unlocked;
-          const done = completed.has(li);
-          const isNew = !done && !locked && li === nextLevel;
-
-          return (
-            <TouchableOpacity
-              key={lv.id}
-              disabled={locked}
-              onPress={() => !locked && onSelect(li)}
-              activeOpacity={0.75}
-              style={[
-                styles.lvRowCard,
-                { transform: [{ rotate: rowIdx % 2 === 0 ? '0.3deg' : '-0.3deg' }] },
-                locked && styles.lvRowCardLocked,
-              ]}
-            >
-              {/* Number / check badge */}
-              <View style={[
-                styles.lvRowNum,
-                {
-                  backgroundColor: done ? '#1a1a1a' : locked ? '#ddd' : tier.color,
-                  borderColor: '#1a1a1a',
-                },
-              ]}>
-                <Text style={[styles.lvRowNumText, { color: done ? tier.color : locked ? '#aaa' : '#fff' }]}>
-                  {done ? '✓' : lv.id}
-                </Text>
-              </View>
-
-              {/* Name + objective */}
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.lvRowName, locked && { color: '#aaa' }]}>{lv.name}</Text>
-                <Text style={[styles.lvRowObj, locked && { color: '#ccc' }]}>{lv.objective.label}</Text>
-              </View>
-
-              {/* Right badge */}
-              {locked && (
-                <View style={styles.lvRowLottieContainer}>
-                  <Text style={styles.lvRowLockIcon}>🔒</Text>
-                </View>
-              )}
-              {isNew && (
-                <View style={styles.lvRowNewBadge}>
-                  <LottieAnimation source={newAnimation} autoPlay loop style={styles.lvRowLottieNew} />
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
       </View>
     </View>
   );

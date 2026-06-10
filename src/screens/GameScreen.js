@@ -49,7 +49,10 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
   const flashTimer = useRef(null);
   const selectedRef = useRef(null);
   const mountedRef = useRef(true);
+  const phaseRef = useRef('play');
   const tierColor = TIER_COLORS[level.tier] || '#4fd04f';
+
+  const setPhaseSync = (p) => { phaseRef.current = p; setPhase(p); };
 
   useEffect(() => {
     mountedRef.current = true;
@@ -88,7 +91,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     selectedRef.current = null;
     setSel(null);
     setHoveredCell(null);
-    setPhase('play');
+    setPhaseSync('play');
     setHistory([]);
     setDanger(new Set());
     setJumpFrom(null);
@@ -100,7 +103,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
   };
 
   const undo = () => {
-    if (!history.length || phase !== 'play') return;
+    if (!history.length || phaseRef.current !== 'play') return;
     const prev = history[history.length - 1];
     setPendingChoice(null);
     setDisplayGrid(cloneGrid(prev.grid));
@@ -111,7 +114,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     selectedRef.current = null;
     setSel(null);
     setHoveredCell(null);
-    setPhase('play');
+    setPhaseSync('play');
   };
 
   const animateJump = async (ev, currentDisplay) => {
@@ -155,26 +158,26 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     selectedRef.current = null;
     setSel(null);
     setHoveredCell(null);
-    setPhase('play');
+    setPhaseSync('play');
 
     if (checkWin(level.objective, ns, nmc, finalGrid)) {
-      setTimeout(() => setPhase('win'), 300);
+      setTimeout(() => setPhaseSync('win'), 300);
       return;
     }
     if (nm <= 0 || !hasAnyMove(finalGrid)) {
-      setTimeout(() => setPhase('lose'), 300);
+      setTimeout(() => setPhaseSync('lose'), 300);
     }
   }, [level]);
 
   const handleChoiceSelect = useCallback((option) => {
-    if (phase !== 'choosing' || !pendingChoice) return;
+    if (phaseRef.current !== 'choosing' || !pendingChoice) return;
 
     const choice = pendingChoice;
     selectedRef.current = null;
     setSel(null);
     setHoveredCell(null);
     setPendingChoice(null);
-    setPhase('animating');
+    setPhaseSync('animating');
 
     (async () => {
       showFlash(
@@ -207,7 +210,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
           accEventCount: newAccEventCount,
           workingGrid: current,
         });
-        setPhase('choosing');
+        setPhaseSync('choosing');
         return;
       }
 
@@ -216,7 +219,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
   }, [finalizeTurn, maxCombo, moves, pendingChoice, phase, score]);
 
   const handleChoiceTap = useCallback((r, c) => {
-    if (phase !== 'choosing' || !pendingChoice) return;
+    if (phaseRef.current !== 'choosing' || !pendingChoice) return;
     const matches = pendingChoice.options.filter(
       (option) =>
         (option.from[0] === r && option.from[1] === c) ||
@@ -245,7 +248,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     if (!res) return;
 
     setHistory((h) => [...h, { grid: cloneGrid(displayGrid), score, moves, maxCombo }]);
-    setPhase('animating');
+    setPhaseSync('animating');
 
     const afterMove = cloneGrid(displayGrid);
     afterMove[tr][tc] = afterMove[sr][sc];
@@ -276,7 +279,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
           accEventCount: res.events.length,
           workingGrid: current,
         });
-        setPhase('choosing');
+        setPhaseSync('choosing');
         showFlash('Choose which same-tier eat resolves first.', '#ffcc00');
         return;
       }
@@ -286,7 +289,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
   }, [displayGrid, finalizeTurn, maxCombo, moves, score]);
 
   const handleDragStart = useCallback((r, c) => {
-    if (phase === 'play') {
+    if (phaseRef.current === 'play') {
       const cell = displayGrid[r]?.[c];
       if (!cell || cell === 'G') return false;
       selectedRef.current = [r, c];
@@ -295,7 +298,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
       return true;
     }
 
-    if (phase !== 'choosing' || !pendingChoice) return false;
+    if (phaseRef.current !== 'choosing' || !pendingChoice) return false;
     const matches = pendingChoice.options.filter(
       (option) => option.from[0] === r && option.from[1] === c
     );
@@ -307,14 +310,14 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
   }, [displayGrid, pendingChoice, phase]);
 
   const handleDragHover = useCallback((r, c) => {
-    if (phase !== 'play' && phase !== 'choosing') return;
+    if (phaseRef.current !== 'play' && phaseRef.current !== 'choosing') return;
     setHoveredCell(r == null || c == null ? null : [r, c]);
   }, [phase]);
 
   const handleDragEnd = useCallback((r, c) => {
     const dragSource = selectedRef.current || selected;
 
-    if ((phase !== 'play' && phase !== 'choosing') || !dragSource) {
+    if ((phaseRef.current !== 'play' && phaseRef.current !== 'choosing') || !dragSource) {
       selectedRef.current = null;
       setSel(null);
       setHoveredCell(null);
@@ -329,7 +332,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     if (r == null || c == null) return;
     if (sr === r && sc === c) return;
 
-    if (phase === 'choosing') {
+    if (phaseRef.current === 'choosing') {
       const option = findChoiceOption(sr, sc, r, c);
       if (option) {
         handleChoiceSelect(option);
