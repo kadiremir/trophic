@@ -50,6 +50,134 @@
         color: transparent !important;
       }
     </style>
+    <style id="trophic-continue-styles">
+      /* Continue — Cloud RGB. Web-only effects; see src/components/ContinueButton.js */
+      @property --trophic-rgb-ang {
+        syntax: '<angle>';
+        inherits: false;
+        initial-value: 0deg;
+      }
+
+      .trophic-continue {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        text-align: center;
+        font-family: 'Nunito', sans-serif;
+      }
+
+      .trophic-continue .ctx-eyebrow {
+        font-size: 9px;
+        letter-spacing: 5px;
+        text-transform: uppercase;
+        color: #ff9824;
+        font-weight: 700;
+        opacity: 0.65;
+      }
+      .trophic-continue .ctx-level-name {
+        margin-top: 6px;
+        font-family: 'Cinzel Decorative', Georgia, serif;
+        font-size: 20px;
+        color: rgba(255, 255, 255, 0.58);
+        letter-spacing: 2px;
+      }
+
+      .trophic-continue .cloud-outer {
+        animation: trophic-cloud-glow 2s linear infinite;
+        zoom: 0.7; /* scale the whole button (and its glow) to 0.7x */
+      }
+
+      .trophic-continue .cloud-btn {
+        display: block;
+        border: none;
+        padding: 4px;
+        min-width: 260px;
+        background: conic-gradient(
+          from var(--trophic-rgb-ang),
+          #ff0055 0%,
+          #ff6600 14%,
+          #ffe000 28%,
+          #00ff88 43%,
+          #00ccff 57%,
+          #8844ff 72%,
+          #ff00aa 86%,
+          #ff0055 100%
+        );
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        animation: trophic-cloud-morph 7s ease-in-out infinite,
+          trophic-rgb-rotate 2s linear infinite;
+        transition: transform 0.12s ease;
+      }
+      .trophic-continue .cloud-btn:active {
+        transform: scale(0.96);
+      }
+
+      .trophic-continue .cloud-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        background: #04100a;
+        border-radius: inherit;
+        padding: 18px 48px;
+      }
+
+      .trophic-continue .cloud-sub {
+        font-size: 9px;
+        letter-spacing: 3.5px;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.28);
+        font-weight: 700;
+      }
+      .trophic-continue .cloud-label {
+        font-size: 17px;
+        font-weight: 900;
+        letter-spacing: 3.5px;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.9);
+        text-shadow: 0 0 18px rgba(255, 255, 255, 0.2);
+      }
+
+      .trophic-continue .ctx-hint {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.16);
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        font-weight: 600;
+      }
+
+      @keyframes trophic-cloud-morph {
+        0%   { border-radius: 62% 38% 56% 44% / 44% 56% 38% 62%; }
+        9%   { border-radius: 42% 58% 44% 56% / 56% 44% 58% 42%; }
+        18%  { border-radius: 58% 42% 68% 32% / 32% 68% 42% 58%; }
+        27%  { border-radius: 36% 64% 34% 66% / 66% 34% 64% 36%; }
+        36%  { border-radius: 66% 34% 52% 48% / 48% 52% 34% 66%; }
+        45%  { border-radius: 34% 66% 62% 38% / 38% 62% 66% 34%; }
+        54%  { border-radius: 54% 46% 36% 64% / 64% 36% 46% 54%; }
+        63%  { border-radius: 46% 54% 66% 34% / 34% 66% 54% 46%; }
+        72%  { border-radius: 70% 30% 42% 58% / 58% 42% 30% 70%; }
+        81%  { border-radius: 38% 62% 58% 42% / 42% 58% 62% 38%; }
+        90%  { border-radius: 60% 40% 38% 62% / 62% 38% 40% 60%; }
+        100% { border-radius: 62% 38% 56% 44% / 44% 56% 38% 62%; }
+      }
+
+      @keyframes trophic-rgb-rotate {
+        to { --trophic-rgb-ang: 360deg; }
+      }
+
+      @keyframes trophic-cloud-glow {
+        0%   { filter: drop-shadow(0 0 32px hsla(0,   100%, 65%, 0.7)) drop-shadow(0 0 70px hsla(0,   100%, 65%, 0.25)); }
+        14%  { filter: drop-shadow(0 0 32px hsla(35,  100%, 62%, 0.7)) drop-shadow(0 0 70px hsla(35,  100%, 62%, 0.25)); }
+        28%  { filter: drop-shadow(0 0 32px hsla(75,  100%, 55%, 0.7)) drop-shadow(0 0 70px hsla(75,  100%, 55%, 0.25)); }
+        43%  { filter: drop-shadow(0 0 32px hsla(155, 100%, 50%, 0.7)) drop-shadow(0 0 70px hsla(155, 100%, 50%, 0.25)); }
+        57%  { filter: drop-shadow(0 0 32px hsla(195, 100%, 55%, 0.7)) drop-shadow(0 0 70px hsla(195, 100%, 55%, 0.25)); }
+        72%  { filter: drop-shadow(0 0 32px hsla(255, 100%, 68%, 0.7)) drop-shadow(0 0 70px hsla(255, 100%, 68%, 0.25)); }
+        86%  { filter: drop-shadow(0 0 32px hsla(315, 100%, 63%, 0.7)) drop-shadow(0 0 70px hsla(315, 100%, 63%, 0.25)); }
+        100% { filter: drop-shadow(0 0 32px hsla(360, 100%, 65%, 0.7)) drop-shadow(0 0 70px hsla(360, 100%, 65%, 0.25)); }
+      }
+    </style>
     <style id="expo-reset">
       html,
       body {

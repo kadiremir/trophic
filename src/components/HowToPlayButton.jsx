@@ -37,6 +37,7 @@ export default function HowToPlayButton({ onPress }) {
 const styles = StyleSheet.create({
   btn: {
     overflow: 'hidden',
+    marginTop: 24,
     borderRadius: 12,
     backgroundColor: 'rgba(3,28,33,0.95)',
     borderWidth: 1,

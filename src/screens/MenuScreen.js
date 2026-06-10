@@ -18,6 +18,7 @@ import { LEVELS, TIER_META } from '../game/levels';
 import { PAL, PIECE_IMAGES } from '../game/constants';
 import PieceIcon from '../components/PieceIcon';
 import FoodChainShowcase from '../components/FoodChainShowcase';
+import ContinueButton from '../components/ContinueButton';
 import LottieAnimation from '../components/LottieAnimation';
 import HowToPlayButton from '../components/HowToPlayButton';
 import completedAnimation from '../../assets/completed.json';
@@ -83,9 +84,16 @@ export default function MenuScreen({ unlocked, completed, onSelect, active = tru
       >
         <View style={styles.hero}>
           <TrophicHeroBrand />
-          <HowToPlayButton onPress={() => setShowHowToPlay(true)} />
           <FoodChainShowcase active={active} />
         </View>
+
+        {nextLevel >= 0 && (
+          <ContinueButton
+            subLabel={`Next Level: ${LEVELS[nextLevel].id}`}
+            accent={currentTierIndex >= 0 ? TIER_META[currentTierIndex].color : '#ff9824'}
+            onPress={() => onSelect(nextLevel)}
+          />
+        )}
 
         <ProgressSummary
           tiers={TIER_META}
@@ -122,6 +130,8 @@ export default function MenuScreen({ unlocked, completed, onSelect, active = tru
             </View>
           );
         })}
+
+        <HowToPlayButton onPress={() => setShowHowToPlay(true)} />
       </ScrollView>
 
       <HowToPlayModal
