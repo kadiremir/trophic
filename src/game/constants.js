@@ -22,11 +22,6 @@ export const PIECE_LABELS = {
 
 export const PIECE_IMAGES = {
   G: require('../../assets/characters/grass.png'),
-  R: require('../../assets/characters/rabbit.png'),
-  F: require('../../assets/characters/fox.png'),
-  W: require('../../assets/characters/wolf.png'),
-  B: require('../../assets/characters/bear.png'),
-  D: require('../../assets/characters/dinosaur.png'),
 };
 
 // minus-1 prey: what each predator eats

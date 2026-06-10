@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
 import { PAL } from '../game/constants';
 import PieceIcon from './PieceIcon';
 
-export default function Cell({
+function Cell({
   cell,
-  onPress,
-  disabled,
+  row,
+  col,
+  onCellPress,
   isSelected,
   isHovered,
   isTarget,
@@ -19,6 +20,9 @@ export default function Cell({
   crunchColor,
   size,
 }) {
+  const handlePress = useCallback(() => {
+    if (onCellPress) onCellPress(row, col);
+  }, [onCellPress, row, col]);
   const pal = PAL[cell || 'E'];
 
   const getBg = () => {
@@ -35,7 +39,7 @@ export default function Cell({
     if (isDanger) return { borderColor: '#ff3030', borderWidth: 2 };
     if (isChoiceTarget) return { borderColor: '#ffcc00', borderWidth: 2 };
     if (isHovered) return { borderColor: '#ff5a46', borderWidth: 2 };
-    if (isSelected) return { borderColor: pal.glow, borderWidth: 2 };
+    if (isSelected) return { borderColor: '#ffd700', borderWidth: 1.5 };
     if (isHuntTarget) return { borderColor: '#ff6050', borderWidth: 2 };
     if (isTarget) return { borderColor: 'rgba(255,255,255,0.3)', borderWidth: 1.5, borderStyle: 'dashed' };
     return { borderColor: pal.border, borderWidth: 1.5 };
@@ -45,7 +49,7 @@ export default function Cell({
     if (isDanger) return { shadowColor: '#ff3030', shadowOpacity: 0.9, shadowRadius: 10, elevation: 8 };
     if (isChoiceTarget) return { shadowColor: '#ffcc00', shadowOpacity: 0.9, shadowRadius: 12, elevation: 8 };
     if (isHovered) return { shadowColor: '#ff5a46', shadowOpacity: 0.65, shadowRadius: 10, elevation: 8 };
-    if (isSelected) return { shadowColor: pal.glow, shadowOpacity: 0.7, shadowRadius: 8, elevation: 6 };
+    if (isSelected) return { shadowColor: '#ffd700', shadowOpacity: 0.8, shadowRadius: 8, elevation: 6 };
     if (isCrunch) return { shadowColor: crunchColor || '#fff', shadowOpacity: 1, shadowRadius: 16, elevation: 12 };
     return {};
   };
@@ -98,14 +102,13 @@ export default function Cell({
     getShadow(),
   ];
 
-  if (!onPress || disabled) {
+  if (!onCellPress) {
     return <View style={sharedStyle}>{content}</View>;
   }
 
   return (
     <TouchableOpacity
-      onPress={onPress}
-      disabled={disabled}
+      onPress={handlePress}
       activeOpacity={0.75}
       style={sharedStyle}
     >
@@ -114,9 +117,11 @@ export default function Cell({
   );
 }
 
+export default React.memo(Cell);
+
 const styles = StyleSheet.create({
   cell: {
-    borderRadius: 10,
+    borderRadius: 12,
     margin: 2.5,
     alignItems: 'center',
     justifyContent: 'center',
