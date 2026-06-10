@@ -207,17 +207,9 @@ function TierCard({
                   borderColor: '#1a1a1a',
                 },
               ]}>
-                {done ? (
-                  <LottieAnimation
-                    source={completedAnimation}
-                    autoPlay loop
-                    style={styles.lvRowLottieSmall}
-                  />
-                ) : (
-                  <Text style={[styles.lvRowNumText, { color: done ? tier.color : locked ? '#aaa' : '#fff' }]}>
-                    {lv.id}
-                  </Text>
-                )}
+                <Text style={[styles.lvRowNumText, { color: done ? tier.color : locked ? '#aaa' : '#fff' }]}>
+                  {done ? '✓' : lv.id}
+                </Text>
               </View>
 
               {/* Name + objective */}
