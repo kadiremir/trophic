@@ -35,12 +35,9 @@ export default function MenuScreen({ unlocked, completed, onSelect }) {
   // First unlocked level that hasn't been completed yet
   const nextLevel = LEVELS.findIndex((_, li) => li < unlocked && !completed.has(li));
 
-  // Tiers with at least one unlocked level start expanded
-  const initialExpanded = new Set(
-    TIER_META.map((tier, ti) =>
-      tier.levels.some((li) => li < unlocked) ? ti : null
-    ).filter((x) => x !== null)
-  );
+  // Only expand the tier containing the next incomplete level
+  const currentTierIndex = TIER_META.findIndex((tier) => tier.levels.includes(nextLevel));
+  const initialExpanded = currentTierIndex >= 0 ? new Set([currentTierIndex]) : new Set();
   const [expandedTiers, setExpandedTiers] = React.useState(initialExpanded);
   const scrollRef = React.useRef(null);
   const tierYs = React.useRef({});
