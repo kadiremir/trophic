@@ -19,7 +19,6 @@ import PieceIcon from '../components/PieceIcon';
 import FoodChainShowcase from '../components/FoodChainShowcase';
 import LottieAnimation from '../components/LottieAnimation';
 import completedAnimation from '../../assets/completed.json';
-import lockedAnimation from '../../assets/locked.json';
 import newAnimation from '../../assets/new.json';
 
 // Derive apex emoji from chain string e.g. "G->R->F->W" → '🐺'
@@ -37,8 +36,16 @@ export default function MenuScreen({ unlocked, completed, onSelect }) {
 
   // Only expand the tier containing the next incomplete level
   const currentTierIndex = TIER_META.findIndex((tier) => tier.levels.includes(nextLevel));
-  const initialExpanded = currentTierIndex >= 0 ? new Set([currentTierIndex]) : new Set();
-  const [expandedTiers, setExpandedTiers] = React.useState(initialExpanded);
+  const [expandedTiers, setExpandedTiers] = React.useState(
+    () => currentTierIndex >= 0 ? new Set([currentTierIndex]) : new Set()
+  );
+
+  // Re-sync when unlocked/completed change (e.g. after Google sign-in loads progress)
+  React.useEffect(() => {
+    const next = LEVELS.findIndex((_, li) => li < unlocked && !completed.has(li));
+    const ti = TIER_META.findIndex((tier) => tier.levels.includes(next));
+    setExpandedTiers(ti >= 0 ? new Set([ti]) : new Set());
+  }, [unlocked, completed]);
   const scrollRef = React.useRef(null);
   const tierYs = React.useRef({});
 
@@ -218,7 +225,7 @@ function TierCard({
               {/* Right badge */}
               {locked && (
                 <View style={styles.lvRowLottieContainer}>
-                  <LottieAnimation source={lockedAnimation} autoPlay loop style={styles.lvRowLottieLock} />
+                  <Text style={styles.lvRowLockIcon}>🔒</Text>
                 </View>
               )}
               {isNew && (
@@ -684,7 +691,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  lvRowLottieLock: { position: 'absolute', width: 48, height: 48 },
+  lvRowLockIcon: { fontSize: 14, opacity: 0.6 },
   lvRowNewBadge: {
     width: 45,
     alignSelf: 'stretch',
