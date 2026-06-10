@@ -115,7 +115,7 @@ export default function MenuScreen({ unlocked, completed, onSelect, active = tru
                 allLocked={allLocked}
                 completedCount={completedCount}
                 apexToken={apexToken}
-                onToggle={() => toggleTier(ti)}
+                onToggle={() => !allLocked && toggleTier(ti)}
                 onSelect={onSelect}
               />
             </View>
@@ -198,7 +198,7 @@ function TierCard({
         activeOpacity={0.8}
         style={[styles.tierPill, { borderColor: tier.color, display: isExpanded ? 'none' : 'flex' }]}
       >
-        <CometSweep color={tier.color} visible={!isExpanded} />
+        {allLocked && <CometSweep color={tier.color} visible={!isExpanded} />}
         <View style={[styles.tierPillIcon, { borderColor: tier.color, backgroundColor: `${tier.color}22` }]}>
           {allLocked
             ? <Text style={styles.tierPillIconText}>🔒</Text>

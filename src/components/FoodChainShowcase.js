@@ -6,6 +6,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import heroBearAnimation from '../../assets/hero_bear.json';
+import heroRabbitAnimation from '../../assets/hero_rabbit.json';
+import heroGrassAnimation from '../../assets/hero_grass.json';
+import heroFoxAnimation from '../../assets/hero_fox.json';
+import heroWolfAnimation from '../../assets/hero_wolf.json';
+import heroDinoAnimation from '../../assets/hero_dino_1.json';
 import LottieAnimation from './LottieAnimation';
 import PieceIcon from './PieceIcon';
 
@@ -169,6 +174,41 @@ function GlassOrb({ entry, size, phase }) {
             autoPlay={true}
             loop={true}
             style={styles.bearAnimation}
+          />
+        ) : entry.token === 'R' ? (
+          <LottieAnimation
+            source={heroRabbitAnimation}
+            autoPlay={true}
+            loop={true}
+            style={styles.bearAnimation}
+          />
+        ) : entry.token === 'G' ? (
+          <LottieAnimation
+            source={heroGrassAnimation}
+            autoPlay={true}
+            loop={true}
+            style={styles.grassAnimation}
+          />
+        ) : entry.token === 'F' ? (
+          <LottieAnimation
+            source={heroFoxAnimation}
+            autoPlay={true}
+            loop={true}
+            style={styles.bearAnimation}
+          />
+        ) : entry.token === 'W' ? (
+          <LottieAnimation
+            source={heroWolfAnimation}
+            autoPlay={true}
+            loop={true}
+            style={styles.wolfAnimation}
+          />
+        ) : entry.token === 'D' ? (
+          <LottieAnimation
+            source={heroDinoAnimation}
+            autoPlay={true}
+            loop={true}
+            style={styles.dinoAnimation}
           />
         ) : (
           <PieceIcon token={entry.token} size={characterSize} />
@@ -599,7 +639,19 @@ const styles = StyleSheet.create({
     opacity: 0.82,
   },
   bearAnimation: {
-    width: '108%',
-    height: '108%',
+    width: '130%',
+    height: '130%',
+  },
+  grassAnimation: {
+    width: '310%',
+    height: '310%',
+  },
+  wolfAnimation: {
+    width: '147%',
+    height: '147%',
+  },
+  dinoAnimation: {
+    width: '97%',
+    height: '97%',
   },
 });
