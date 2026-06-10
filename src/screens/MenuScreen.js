@@ -132,21 +132,23 @@ export default function MenuScreen({ unlocked, completed, onSelect, active = tru
 }
 
 // ── CometSweep ───────────────────────────────────────────────────────────────
-function CometSweep({ color }) {
+function CometSweep({ color, visible }) {
   const x = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
+    if (!visible) return;
+    x.setValue(0);
     const anim = Animated.loop(
       Animated.timing(x, {
         toValue: 1,
         duration: 2800,
         easing: Easing.bezier(0.4, 0, 0.2, 1),
-        useNativeDriver: true,
+        useNativeDriver: false,
       })
     );
     anim.start();
     return () => anim.stop();
-  }, [x]);
+  }, [x, visible]);
 
   const translateX = x.interpolate({
     inputRange: [0, 1],
@@ -196,7 +198,7 @@ function TierCard({
         activeOpacity={0.8}
         style={[styles.tierPill, { borderColor: tier.color, display: isExpanded ? 'none' : 'flex' }]}
       >
-        <CometSweep color={tier.color} />
+        <CometSweep color={tier.color} visible={!isExpanded} />
         <View style={[styles.tierPillIcon, { borderColor: tier.color, backgroundColor: `${tier.color}22` }]}>
           {allLocked
             ? <Text style={styles.tierPillIconText}>🔒</Text>
