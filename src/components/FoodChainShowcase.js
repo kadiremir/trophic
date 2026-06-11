@@ -5,13 +5,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import heroBearAnimation from '../../assets/hero_bear.json';
-import heroRabbitAnimation from '../../assets/hero_rabbit.json';
-import heroGrassAnimation from '../../assets/hero_grass.json';
-import heroFoxAnimation from '../../assets/hero_fox.json';
-import heroWolfAnimation from '../../assets/hero_wolf.json';
-import heroDinoAnimation from '../../assets/hero_dino_1.json';
-import LottieAnimation from './LottieAnimation';
+import HeroCharacter from './HeroCharacter';
 import PieceIcon from './PieceIcon';
 
 const ENTRIES = [
@@ -188,48 +182,8 @@ function GlassOrb({ entry, size, yaw, pitch, orbRef, plateRef }) {
           },
         ]}
       >
-        {entry.token === 'B' ? (
-          <LottieAnimation
-            source={heroBearAnimation}
-            autoPlay={true}
-            loop={true}
-            style={styles.bearAnimation}
-          />
-        ) : entry.token === 'R' ? (
-          <LottieAnimation
-            source={heroRabbitAnimation}
-            autoPlay={true}
-            loop={true}
-            style={styles.bearAnimation}
-          />
-        ) : entry.token === 'G' ? (
-          <LottieAnimation
-            source={heroGrassAnimation}
-            autoPlay={true}
-            loop={true}
-            style={styles.grassAnimation}
-          />
-        ) : entry.token === 'F' ? (
-          <LottieAnimation
-            source={heroFoxAnimation}
-            autoPlay={true}
-            loop={true}
-            style={styles.bearAnimation}
-          />
-        ) : entry.token === 'W' ? (
-          <LottieAnimation
-            source={heroWolfAnimation}
-            autoPlay={true}
-            loop={true}
-            style={styles.wolfAnimation}
-          />
-        ) : entry.token === 'D' ? (
-          <LottieAnimation
-            source={heroDinoAnimation}
-            autoPlay={true}
-            loop={true}
-            style={styles.dinoAnimation}
-          />
+        {entry.token ? (
+          <HeroCharacter style={styles.dinoAnimation} />
         ) : (
           <PieceIcon token={entry.token} size={characterSize} />
         )}
