@@ -5,7 +5,7 @@ export default function HeroCharacter({ style }) {
   return (
     <View style={[{ width: '100%', height: '100%' }, style]}>
       <img
-        src="/dino.svg"
+        src="/trophic/dino.svg"
         alt=""
         style={{ width: '140%', height: '140%', objectFit: 'contain', display: 'block', transform: 'translate(-14%, -32%)' }}
       />
