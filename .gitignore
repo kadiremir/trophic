@@ -5,5 +5,4 @@ dist/
 .claude/
 npm-debug.log*
 .DS_Store
-.ios/
-/ios/
+ios/
