@@ -20,12 +20,26 @@ import { PAL, PIECE_IMAGES } from '../game/constants';
 import PieceIcon from '../components/PieceIcon';
 import FoodChainShowcase from '../components/FoodChainShowcase';
 import ContinueButton from '../components/ContinueButton';
-import LottieAnimation from '../components/LottieAnimation';
 import HowToPlayButton from '../components/HowToPlayButton';
-import completedAnimation from '../../assets/completed.json';
-import newAnimation from '../../assets/new.json';
 
 // Derive apex species token from chain string e.g. "G->R->F->W" → 'W'
+function NewBadge() {
+  const pulse = React.useRef(new Animated.Value(1)).current;
+  React.useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.25, duration: 600, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 600, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+  return (
+    <Animated.View style={{ transform: [{ scale: pulse }], backgroundColor: '#f4a400', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2 }}>
+      <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>NEW</Text>
+    </Animated.View>
+  );
+}
+
 function apexTokenForTier(chain) {
   const tokens = chain.split('->');
   return tokens[tokens.length - 1] || 'F';
@@ -430,8 +444,7 @@ function TierCard({
 }) {
   const sz = (n) => Math.round(n * scale);
   // Both layouts stay mounted at all times — toggling display:none instead of
-  // unmounting prevents Lottie from being destroyed and re-initialized on every
-  // open/close, which caused the browser to freeze on rapid taps.
+  // unmounting avoids animation state resets on rapid taps.
   return (
     <View>
       {/* Collapsed pill — hidden when expanded */}
@@ -516,13 +529,13 @@ function TierCard({
                 </View>
 
                 {locked && (
-                  <View style={styles.lvRowLottieContainer}>
+                  <View style={styles.lvRowLockContainer}>
                     <Text style={styles.lvRowLockIcon}>🔒</Text>
                   </View>
                 )}
                 {isNew && (
                   <View style={styles.lvRowNewBadge}>
-                    <LottieAnimation source={newAnimation} autoPlay loop style={styles.lvRowLottieNew} />
+                    <NewBadge />
                   </View>
                 )}
               </TouchableOpacity>
@@ -1035,10 +1048,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   lvRowNumText: { fontSize: 12, fontWeight: '900' },
-  lvRowLottieSmall: { position: 'absolute', width: 48, height: 48 },
   lvRowName: { fontSize: 12, fontWeight: '900', color: '#1a1a1a' },
   lvRowObj: { fontSize: 10, color: '#666' },
-  lvRowLottieContainer: {
+  lvRowLockContainer: {
     width: 24,
     alignSelf: 'stretch',
     alignItems: 'center',
@@ -1051,7 +1063,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  lvRowLottieNew: { position: 'absolute', width: 75, height: 75 },
 
   // ── How to Play button ─────────────────────────────────────────────────
   howToPlayBtn: {

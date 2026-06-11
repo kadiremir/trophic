@@ -4,8 +4,6 @@ import {
   TouchableOpacity, SafeAreaView, StatusBar, Animated, Easing,
 } from 'react-native';
 import { useLayout } from '../hooks/useLayout';
-import LottieAnimation from '../components/LottieAnimation';
-import completedAnimation from '../../assets/completed.json';
 import Grid from '../components/Grid';
 import { LEVELS, TIER_META } from '../game/levels';
 import {
@@ -507,12 +505,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
       {phase === 'win' && (
         <ResultOverlay>
           <View style={styles.overlayCard}>
-            <LottieAnimation
-              source={completedAnimation}
-              autoPlay={true}
-              loop={false}
-              style={styles.winLottie}
-            />
+            <WinBurst />
             <Text style={styles.overlayTitle}>Level Complete!</Text>
             <Text style={[styles.overlayScore, { color: '#3a6b1f' }]}>{score} pts</Text>
             {maxCombo >= 2 && (
@@ -612,6 +605,22 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
 
       {overlays}
     </SafeAreaView>
+  );
+}
+
+function WinBurst() {
+  const scale = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scale, { toValue: 1, friction: 4, tension: 80, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+  }, []);
+  return (
+    <Animated.View style={{ transform: [{ scale }], opacity, width: 80, height: 80, borderRadius: 40, backgroundColor: '#4caf50', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+      <Text style={{ fontSize: 40, lineHeight: 48 }}>✓</Text>
+    </Animated.View>
   );
 }
 
@@ -888,7 +897,6 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 16, shadowOffset: { width: 0, height: 10 }, elevation: 16,
   },
   overlayEmoji: { fontSize: 30, fontWeight: 'bold', color: PAPER.ink },
-  winLottie: { width: 120, height: 120, marginBottom: -8 },
   overlayTitle: { fontSize: 24, fontWeight: 'bold', color: PAPER.ink, marginTop: 10, marginBottom: 4 },
   overlayScore: { fontSize: 20, marginBottom: 4, fontWeight: 'bold' },
   overlayCombo: { fontSize: 14, color: '#c98a2e', marginBottom: 8 },
