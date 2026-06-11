@@ -564,9 +564,10 @@ function TrophicHeroBrand({ wide = false, scale = 1 }) {
 
   const dropAnims = React.useRef(TITLE_LETTERS.map(() => new Animated.Value(0))).current;
   const opacityAnims = React.useRef(TITLE_LETTERS.map(() => new Animated.Value(0))).current;
+  const hueAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
-    const animations = TITLE_LETTERS.map((_, i) =>
+    const dropAnimations = TITLE_LETTERS.map((_, i) =>
       Animated.sequence([
         Animated.delay(i * 80),
         Animated.parallel([
@@ -584,7 +585,18 @@ function TrophicHeroBrand({ wide = false, scale = 1 }) {
         ]),
       ])
     );
-    Animated.parallel(animations).start();
+    Animated.parallel(dropAnimations).start();
+
+    const hueLoop = Animated.loop(
+      Animated.timing(hueAnim, {
+        toValue: 360,
+        duration: 4000,
+        easing: Easing.linear,
+        useNativeDriver: false,
+      })
+    );
+    hueLoop.start();
+    return () => hueLoop.stop();
   }, []);
 
   return (
@@ -604,7 +616,15 @@ function TrophicHeroBrand({ wide = false, scale = 1 }) {
           ]}
         />
       ))}
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
+      <Animated.View style={[
+        { flexDirection: 'row', alignItems: 'flex-end' },
+        Platform.OS === 'web' && {
+          filter: hueAnim.interpolate({
+            inputRange: [0, 360],
+            outputRange: ['hue-rotate(0deg)', 'hue-rotate(360deg)'],
+          }),
+        },
+      ]}>
         {TITLE_LETTERS.map(({ char, color }, i) => {
           const translateY = dropAnims[i].interpolate({
             inputRange: [0, 1],
@@ -630,7 +650,7 @@ function TrophicHeroBrand({ wide = false, scale = 1 }) {
             </Animated.Text>
           );
         })}
-      </View>
+      </Animated.View>
       <Text style={[styles.subtitle, wide && styles.subtitleWide, { fontSize: Math.round(titleFontSize * 0.2), marginTop: sz(10) }]}>CHAIN OF NATURE</Text>
     </View>
   );
