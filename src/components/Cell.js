@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
+import React, { useCallback, useRef, useEffect } from 'react';
+import { TouchableOpacity, View, Text, StyleSheet, Animated } from 'react-native';
 import { STICKER, PAPER } from '../game/constants';
 import PieceIcon from './PieceIcon';
 
@@ -9,6 +9,7 @@ function Cell({
   col,
   onCellPress,
   isSelected,
+  isChoicePred,
   isHovered,
   isTarget,
   isHuntTarget,
@@ -24,10 +25,26 @@ function Cell({
     if (onCellPress) onCellPress(row, col);
   }, [onCellPress, row, col]);
 
+  const blinkAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!isChoicePred) {
+      blinkAnim.setValue(1);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(blinkAnim, { toValue: 0.25, duration: 380, useNativeDriver: true }),
+        Animated.timing(blinkAnim, { toValue: 1, duration: 380, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => { loop.stop(); blinkAnim.setValue(1); };
+  }, [isChoicePred, blinkAnim]);
+
   const sk = STICKER[cell || 'E'];
   const isEmpty = !cell;
   // Stickers are slapped down at playful angles; lifted ones straighten out.
-  const lifted = isSelected || isHovered || isCrunch || isChoiceTarget;
+  const lifted = isSelected || isChoicePred || isHovered || isCrunch || isChoiceTarget;
   const restAngle = (row + col) % 2 === 0 ? -4 : 4;
 
   const getFill = () => {
@@ -40,7 +57,7 @@ function Cell({
   const getBorder = () => {
     if (isDanger) return { borderColor: '#fff', borderWidth: 4, borderStyle: 'solid' };
     if (isChoiceTarget) return { borderColor: '#fff', borderWidth: 4, borderStyle: 'solid' };
-    if (isSelected || isHovered) return { borderColor: PAPER.gold, borderWidth: 4, borderStyle: 'solid' };
+    if (isSelected || isChoicePred || isHovered) return { borderColor: PAPER.gold, borderWidth: 4, borderStyle: 'solid' };
     if (isHuntTarget) return { borderColor: '#ff5d7a', borderWidth: 4, borderStyle: 'dashed' };
     if (isEmpty) {
       return isTarget
@@ -71,6 +88,7 @@ function Cell({
 
   const tileScale = lifted ? 1.07 : 1;
   const tileAngle = lifted || (isEmpty && !isTarget) ? 0 : restAngle;
+  const blinkStyle = isChoicePred ? { opacity: blinkAnim } : null;
 
   const content = (
     <>
@@ -118,17 +136,23 @@ function Cell({
   ];
 
   if (!onCellPress) {
-    return <View style={sharedStyle}>{content}</View>;
+    return (
+      <Animated.View style={blinkStyle}>
+        <View style={sharedStyle}>{content}</View>
+      </Animated.View>
+    );
   }
 
   return (
-    <TouchableOpacity
-      onPress={handlePress}
-      activeOpacity={0.8}
-      style={sharedStyle}
-    >
-      {content}
-    </TouchableOpacity>
+    <Animated.View style={blinkStyle}>
+      <TouchableOpacity
+        onPress={handlePress}
+        activeOpacity={0.8}
+        style={sharedStyle}
+      >
+        {content}
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 

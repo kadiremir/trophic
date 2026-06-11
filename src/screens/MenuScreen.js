@@ -33,7 +33,7 @@ function apexTokenForTier(chain) {
 
 export default function MenuScreen({ unlocked, completed, onSelect, active = true }) {
   const { isWide, scale, contentWidth } = useLayout();
-  const sz = (n) => Math.round(n * scale);
+  const sz = React.useCallback((n) => Math.round(n * scale), [scale]);
   const [showHowToPlay, setShowHowToPlay] = React.useState(false);
 
   // First unlocked level that hasn't been completed yet
@@ -384,7 +384,7 @@ function CometSweep({ color, visible }) {
         toValue: 1,
         duration: 2800,
         easing: Easing.bezier(0.4, 0, 0.2, 1),
-        useNativeDriver: false,
+        useNativeDriver: true,
       })
     );
     anim.start();
@@ -550,7 +550,7 @@ function TrophicHeroBrand({ wide = false, scale = 1 }) {
   const sz = (n) => Math.round(n * scale);
   const appShellWidth = Math.min(viewportWidth, cw);
   const titleAvailableWidth = appShellWidth - sz(32) * 2 - sz(16) * 2;
-  const titleFontSize = Math.min(sz(64), Math.floor((titleAvailableWidth - 24) / 5.5));
+  const titleFontSize = Math.min(sz(64), Math.floor((titleAvailableWidth - 24) / 6.5));
 
   const dropAnim = React.useRef(new Animated.Value(0)).current;
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
@@ -558,28 +558,31 @@ function TrophicHeroBrand({ wide = false, scale = 1 }) {
   React.useEffect(() => {
     if (Platform.OS === 'web') {
       const styleId = 'trophic-rainbow-style';
-      if (!document.getElementById(styleId)) {
-        const el = document.createElement('style');
+      let el = document.getElementById(styleId);
+      if (!el) {
+        el = document.createElement('style');
         el.id = styleId;
-        el.textContent = `
-          @keyframes trophic-flow {
-            0%   { background-position: 0% 50%; }
-            100% { background-position: 200% 50%; }
-          }
-          #trophic-title {
-            background: linear-gradient(90deg,
-              hsl(0,95%,65%), hsl(51,95%,65%), hsl(102,95%,65%),
-              hsl(153,95%,65%), hsl(204,95%,65%), hsl(255,95%,65%),
-              hsl(306,95%,65%), hsl(0,95%,65%));
-            background-size: 200% 100%;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: trophic-flow 4s linear infinite;
-          }
-        `;
         document.head.appendChild(el);
       }
+      el.textContent = `
+        @keyframes trophic-flow {
+          0%   { background-position: 200% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        #trophic-title {
+          background: linear-gradient(90deg,
+            hsl(0,95%,65%), hsl(51,95%,65%), hsl(102,95%,65%),
+            hsl(153,95%,65%), hsl(204,95%,65%), hsl(255,95%,65%),
+            hsl(306,95%,65%), hsl(0,95%,65%));
+          background-size: 200% 100%;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          animation: trophic-flow 4s linear infinite;
+          transform: translateZ(0);
+          will-change: background-position;
+        }
+      `;
     }
 
     Animated.parallel([

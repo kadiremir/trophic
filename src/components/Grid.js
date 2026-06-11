@@ -24,7 +24,7 @@ const getCellOrigin = (row, col, cellSize, boardOffsetX) => ({
   y: GRID_PADDING + row * (cellSize + CELL_GAP) + CELL_GAP / 2,
 });
 
-export default function Grid({
+const Grid = React.memo(function Grid({
   grid,
   onCellPress,
   onDragStart,
@@ -403,7 +403,8 @@ export default function Grid({
                   col={c}
                   size={cellSize}
                   onCellPress={onCellPress}
-                  isSelected={isSel || isChoicePred}
+                  isSelected={isSel}
+                  isChoicePred={isChoicePred}
                   isHovered={isHover}
                   isTarget={isTgt && !isHunt}
                   isHuntTarget={isHunt}
@@ -421,7 +422,9 @@ export default function Grid({
       </View>
     </View>
   );
-}
+});
+
+export default Grid;
 
 const styles = StyleSheet.create({
   container: {

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, SafeAreaView, StatusBar, Animated, Easing,
@@ -36,7 +36,6 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
   const [hoveredCell, setHoveredCell] = useState(null);
   const [phase, setPhase] = useState('play');
   const [pendingChoice, setPendingChoice] = useState(null);
-  const [blinkOn, setBlinkOn] = useState(true);
   const [history, setHistory] = useState([]);
   const [dangerCells, setDanger] = useState(new Set());
   const [jumpingFrom, setJumpFrom] = useState(null);
@@ -46,11 +45,12 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
   const [showHint, setShowHint] = useState(false);
 
   const { isWide, scale, contentWidth, width: viewportWidth } = useLayout();
-  const sz = (n) => Math.round(n * scale);
+  const sz = useCallback((n) => Math.round(n * scale), [scale]);
   const gridContainerWidth = Math.min(contentWidth, viewportWidth);
   const [gridPanelWidth, setGridPanelWidth] = useState(0);
 
   const popId = useRef(0);
+  const popTimers = useRef([]);
   const flashTimer = useRef(null);
   const selectedRef = useRef(null);
   const mountedRef = useRef(true);
@@ -64,17 +64,10 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     return () => {
       mountedRef.current = false;
       clearTimeout(flashTimer.current);
+      popTimers.current.forEach(clearTimeout);
+      popTimers.current = [];
     };
   }, []);
-
-  useEffect(() => {
-    if (phase !== 'choosing') {
-      setBlinkOn(true);
-      return;
-    }
-    const id = setInterval(() => setBlinkOn((b) => !b), 380);
-    return () => clearInterval(id);
-  }, [phase]);
 
   const showFlash = (msg, color = '#ffd700') => {
     setFlashMsg({ msg, color });
@@ -85,7 +78,8 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
   const addPopup = (r, c, pts, color = '#ffd700') => {
     const id = ++popId.current;
     setPopups((p) => [...p, { id, r, c, pts, color }]);
-    setTimeout(() => setPopups((p) => p.filter((x) => x.id !== id)), 1000);
+    const t = setTimeout(() => setPopups((p) => p.filter((x) => x.id !== id)), 1000);
+    popTimers.current.push(t);
   };
 
   const reset = () => {
@@ -316,8 +310,12 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
 
   const handleDragHover = useCallback((r, c) => {
     if (phaseRef.current !== 'play' && phaseRef.current !== 'choosing') return;
-    setHoveredCell(r == null || c == null ? null : [r, c]);
-  }, [phase]);
+    setHoveredCell((prev) => {
+      if (r == null || c == null) return prev == null ? prev : null;
+      if (prev != null && prev[0] === r && prev[1] === c) return prev;
+      return [r, c];
+    });
+  }, []);
 
   const handleDragEnd = useCallback((r, c) => {
     const dragSource = selectedRef.current || selected;
@@ -351,26 +349,29 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     runMove(sr, sc, r, c);
   }, [displayGrid, findChoiceOption, handleChoiceSelect, phase, runMove, selected]);
 
-  const targets =
-    selected && phase === 'play'
-      ? getLegalTargets(displayGrid, selected[0], selected[1])
-      : selected && phase === 'choosing' && pendingChoice
-      ? new Set(
-          pendingChoice.options
-            .filter((option) => isSameCell(option.from, selected))
-            .map((option) => cellKey(option.to[0], option.to[1]))
-        )
-      : new Set();
+  const targets = useMemo(() => {
+    if (selected && phase === 'play')
+      return getLegalTargets(displayGrid, selected[0], selected[1]);
+    if (selected && phase === 'choosing' && pendingChoice)
+      return new Set(
+        pendingChoice.options
+          .filter((option) => isSameCell(option.from, selected))
+          .map((option) => cellKey(option.to[0], option.to[1]))
+      );
+    return new Set();
+  }, [selected, phase, pendingChoice, displayGrid]);
 
-  const choiceCells =
+  const choiceCells = useMemo(() =>
     phase === 'choosing' && pendingChoice
       ? new Set(pendingChoice.options.map((option) => cellKey(option.to[0], option.to[1])))
-      : new Set();
+      : new Set(),
+  [phase, pendingChoice]);
 
-  const choicePredators =
-    phase === 'choosing' && pendingChoice && blinkOn
+  const choicePredators = useMemo(() =>
+    phase === 'choosing' && pendingChoice
       ? new Set(pendingChoice.options.map((option) => cellKey(option.from[0], option.from[1])))
-      : new Set();
+      : new Set(),
+  [phase, pendingChoice]);
 
   const pct = Math.min(100, Math.round((score / (level.objective.target || 1)) * 100));
 
@@ -611,37 +612,42 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
 }
 
 function ProgressBar({ pct, color }) {
-  const fill = useRef(new Animated.Value(pct)).current;
+  const fill = useRef(new Animated.Value(pct / 100)).current;
   const glow = useRef(new Animated.Value(0)).current;
   const prevPct = useRef(pct);
 
   useEffect(() => {
     Animated.timing(fill, {
-      toValue: pct,
+      toValue: pct / 100,
       duration: 500,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
+      useNativeDriver: true,
     }).start();
 
     if (pct > prevPct.current) {
       glow.setValue(0);
       Animated.sequence([
-        Animated.timing(glow, { toValue: 1, duration: 160, useNativeDriver: false }),
-        Animated.timing(glow, { toValue: 0, duration: 520, useNativeDriver: false }),
+        Animated.timing(glow, { toValue: 1, duration: 160, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0, duration: 520, useNativeDriver: true }),
       ]).start();
     }
     prevPct.current = pct;
   }, [pct, fill, glow]);
 
-  const width = fill.interpolate({
-    inputRange: [0, 100],
-    outputRange: ['0%', '100%'],
+  const scaleX = fill.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
     extrapolate: 'clamp',
   });
 
   return (
     <View style={styles.progressTrack}>
-      <Animated.View style={[styles.progressFill, { width, backgroundColor: color }]}>
+      <Animated.View
+        style={[
+          styles.progressFill,
+          { width: '100%', backgroundColor: color, transformOrigin: 'left', transform: [{ scaleX }] },
+        ]}
+      >
         <Animated.View
           style={[
             styles.progressGlow,
@@ -679,7 +685,7 @@ function ResultOverlay({ children }) {
   );
 }
 
-function StatBox({ label, value, color, scale = 1 }) {
+const StatBox = React.memo(function StatBox({ label, value, color, scale = 1 }) {
   const sz = (n) => Math.round(n * scale);
   return (
     <View style={[styles.statBox, { paddingVertical: sz(9) }]}>
@@ -687,7 +693,7 @@ function StatBox({ label, value, color, scale = 1 }) {
       <Text style={[styles.statLabel, { fontSize: sz(9) }]}>{label}</Text>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: 'transparent' },

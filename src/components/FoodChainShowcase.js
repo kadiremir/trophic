@@ -56,6 +56,17 @@ function colorWithAlpha(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+// Precomputed constant-alpha variants for each entry accent color.
+const ENTRY_COLORS = {};
+ENTRIES.forEach((entry) => {
+  ENTRY_COLORS[entry.token] = {
+    a0:  colorWithAlpha(entry.accent, 0),
+    a18: colorWithAlpha(entry.accent, 0.18),
+    a38: colorWithAlpha(entry.accent, 0.38),
+    a7:  colorWithAlpha(entry.accent, 0.7),
+  };
+});
+
 function projectPoint(entry, angle, tilt, radiusX, radiusY) {
   const lon = entry.lon + angle;
   const x = Math.cos(entry.lat) * Math.cos(lon);
@@ -77,16 +88,17 @@ function projectPoint(entry, angle, tilt, radiusX, radiusY) {
   };
 }
 
-function GlassOrb({ entry, size, phase }) {
+// GlassOrb receives refs for imperative transform updates each frame.
+// orbRef → the outer sphere View; plateRef → the character plate View.
+function GlassOrb({ entry, size, yaw, pitch, orbRef, plateRef }) {
   const depth = entry.point.depth;
-  const yaw = -entry.point.rawX * 18 + Math.sin(phase * Math.PI * 2 + entry.lon) * 6;
-  const pitch = entry.point.rawY * 10 - 4;
   const characterSize = size * (entry.token === 'G' ? 0.56 : 0.72);
   const floorWidth = size * 0.7;
   const floorHeight = size * 0.18;
 
   return (
     <View
+      ref={orbRef}
       style={[
         styles.sphere,
         {
@@ -109,7 +121,7 @@ function GlassOrb({ entry, size, phase }) {
       <LinearGradient
         colors={[
           'rgba(255,255,255,0.38)',
-          colorWithAlpha(entry.accent, 0.18),
+          ENTRY_COLORS[entry.token].a18,
           'rgba(105, 194, 211, 0.1)',
           'rgba(6, 19, 20, 0.34)',
         ]}
@@ -131,10 +143,10 @@ function GlassOrb({ entry, size, phase }) {
 
       <LinearGradient
         colors={[
-          colorWithAlpha(entry.accent, 0),
-          colorWithAlpha(entry.accent, 0.38),
+          ENTRY_COLORS[entry.token].a0,
+          ENTRY_COLORS[entry.token].a38,
           'rgba(255,255,255,0.38)',
-          colorWithAlpha(entry.accent, 0),
+          ENTRY_COLORS[entry.token].a0,
         ]}
         locations={[0, 0.42, 0.72, 1]}
         start={{ x: 0, y: 0.5 }}
@@ -152,6 +164,7 @@ function GlassOrb({ entry, size, phase }) {
       />
 
       <View
+        ref={plateRef}
         style={[
           styles.characterPlate,
           {
@@ -287,6 +300,15 @@ function GlassOrb({ entry, size, phase }) {
   );
 }
 
+function computePositioned(angle, tilt, radiusX, radiusY) {
+  return ENTRIES.map((entry) => ({
+    ...entry,
+    point: projectPoint(entry, angle, tilt, radiusX, radiusY),
+    trailPoint: projectPoint(entry, angle - 0.34, tilt, radiusX, radiusY),
+    tailPoint: projectPoint(entry, angle - 0.66, tilt, radiusX, radiusY),
+  })).sort((a, b) => a.point.depth - b.point.depth);
+}
+
 export default function FoodChainShowcase({ active = true, containerWidth }) {
   const { width } = useWindowDimensions();
   const effectiveWidth = containerWidth || width;
@@ -297,15 +319,33 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
   const centerY = panelHeight * 0.46;
   const radiusX = Math.min(panelWidth * (isWide ? 0.39 : 0.32), isWide ? 350 : 128);
   const radiusY = Math.min(panelHeight * 0.34, 76);
-  const [phase, setPhase] = React.useState(0);
+
+  // Layout values needed inside the RAF loop — updated each render so resizes are picked up.
+  const layoutRef = React.useRef({ centerX, centerY, radiusX, radiusY });
+  layoutRef.current = { centerX, centerY, radiusX, radiusY };
+
   const activeRef = React.useRef(active);
   activeRef.current = active;
+
+  // DOM element refs — populated via ref callbacks in JSX, consumed in RAF loop.
+  const orbitRingEls = React.useRef([null, null, null]);
+  const frontArcEls = React.useRef([null, null]);
+  const sparkEls = React.useRef([null, null, null]);
+  const entryEls = React.useRef(
+    Object.fromEntries(
+      ENTRIES.map((e) => [
+        e.token,
+        { wrap: null, orb: null, plate: null, floor: null, bloom: null, streaks: [null, null, null] },
+      ])
+    )
+  );
 
   React.useEffect(() => {
     let frame;
     const start = Date.now();
     let offset = 0;
     let pauseStart = 0;
+
     const tick = () => {
       if (activeRef.current) {
         if (pauseStart > 0) {
@@ -313,35 +353,153 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
           pauseStart = 0;
         }
         const elapsed = (Date.now() - start - offset) / 1000;
-        setPhase(elapsed * 0.115);
+        const phase = elapsed * 0.115;
+        const { centerX: cx, centerY: cy, radiusX: rx, radiusY: ry } = layoutRef.current;
+        const angle = phase * Math.PI * 2;
+        const tilt = -0.48 + Math.sin(phase * 1.2) * 0.06;
+
+        // Orbit rings
+        ORBIT_RINGS.forEach((ring, i) => {
+          const el = orbitRingEls.current[i];
+          if (!el) return;
+          const rotation = ring.offset + phase * 360 * ring.spin;
+          el.style.transform = `perspective(1000px) rotateX(64deg) rotateZ(${rotation}deg)`;
+        });
+
+        // Front orbit arcs
+        ORBIT_RINGS.slice(0, 2).forEach((ring, i) => {
+          const el = frontArcEls.current[i];
+          if (!el) return;
+          const rotation = ring.offset + 18 + phase * 360 * ring.spin;
+          el.style.transform = `perspective(1000px) rotateX(64deg) rotateZ(${rotation}deg)`;
+        });
+
+        // Orbit sparks
+        ORBIT_SPARKS.forEach((spark, i) => {
+          const el = sparkEls.current[i];
+          if (!el) return;
+          const sparkAngle = angle * (0.9 + i * 0.16) + spark.phase;
+          const x = cx + Math.cos(sparkAngle) * rx * spark.radius;
+          const y = cy + Math.sin(sparkAngle) * ry * 0.7 * spark.radius;
+          el.style.left = `${x - spark.size / 2}px`;
+          el.style.top = `${y - spark.size / 2}px`;
+        });
+
+        // Entries
+        const positioned = computePositioned(angle, tilt, rx, ry);
+        positioned.forEach((entry) => {
+          const els = entryEls.current[entry.token];
+          if (!els) return;
+          const { point, trailPoint, tailPoint } = entry;
+          const size = (52 + point.depth * 44) * entry.size;
+          const left = cx + point.x - size / 2;
+          const top = cy + point.y - size / 2;
+          const headX = cx + point.x;
+          const headY = cy + point.y;
+          const zIndex = Math.round(point.depth * 100) + 10;
+          const depthOpacity = 0.24 + point.depth * 0.76;
+
+          if (els.wrap) {
+            els.wrap.style.left = `${left}px`;
+            els.wrap.style.top = `${top}px`;
+            els.wrap.style.width = `${size}px`;
+            els.wrap.style.height = `${size}px`;
+            els.wrap.style.opacity = `${Math.min(1, 0.56 + point.depth * 0.58)}`;
+            els.wrap.style.zIndex = `${zIndex}`;
+          }
+
+          if (els.orb) {
+            const yaw = -point.rawX * 18 + Math.sin(phase * Math.PI * 2 + entry.lon) * 6;
+            const pitch = point.rawY * 10 - 4;
+            els.orb.style.transform = `perspective(900px) rotateY(${yaw}deg) rotateX(${pitch}deg)`;
+            els.orb.style.width = `${size}px`;
+            els.orb.style.height = `${size}px`;
+            els.orb.style.borderRadius = `${size / 2}px`;
+            els.orb.style.borderColor = colorWithAlpha(entry.accent, 0.44 + point.depth * 0.3);
+            els.orb.style.backgroundColor = colorWithAlpha(entry.accent, 0.04 + point.depth * 0.04);
+          }
+
+          if (els.plate) {
+            const yaw = -point.rawX * 18 + Math.sin(phase * Math.PI * 2 + entry.lon) * 6;
+            els.plate.style.transform = `perspective(900px) rotateY(${-yaw * 0.55}deg) translateY(${point.depth * -2}px)`;
+          }
+
+          if (els.floor) {
+            const floorShadowWidth = size * (0.86 + point.depth * 0.18);
+            const floorShadowHeight = size * 0.18;
+            els.floor.style.width = `${floorShadowWidth}px`;
+            els.floor.style.height = `${floorShadowHeight}px`;
+            els.floor.style.borderRadius = `${floorShadowHeight}px`;
+            els.floor.style.left = `${headX - floorShadowWidth / 2}px`;
+            els.floor.style.top = `${headY + size * 0.36}px`;
+            els.floor.style.opacity = `${0.1 + point.depth * 0.28}`;
+            els.floor.style.zIndex = `${zIndex - 2}`;
+          }
+
+          if (els.bloom) {
+            const headBloomSize = size * (1.14 + point.depth * 0.22);
+            els.bloom.style.width = `${headBloomSize}px`;
+            els.bloom.style.height = `${headBloomSize}px`;
+            els.bloom.style.borderRadius = `${headBloomSize / 2}px`;
+            els.bloom.style.left = `${headX - headBloomSize / 2}px`;
+            els.bloom.style.top = `${headY - headBloomSize / 2}px`;
+            els.bloom.style.opacity = `${0.08 + point.depth * 0.28}`;
+            els.bloom.style.zIndex = `${zIndex - 1}`;
+          }
+
+          const trailDx = point.x - trailPoint.x;
+          const trailDy = point.y - trailPoint.y;
+          const tailDx = point.x - tailPoint.x;
+          const tailDy = point.y - tailPoint.y;
+          const dirLen = Math.max(1, Math.hypot(trailDx, trailDy));
+          const unitX = trailDx / dirLen;
+          const unitY = trailDy / dirLen;
+          const trailAngleDeg = Math.atan2(unitY, unitX) * (180 / Math.PI);
+          const baseLength = Math.max(size * 1.6, Math.hypot(tailDx, tailDy) * 2.1);
+
+          COMET_STREAKS.forEach((streak, si) => {
+            const el = els.streaks[si];
+            if (!el) return;
+            const trailLength = baseLength * streak.length;
+            const trailThickness = size * streak.thickness;
+            const off = size * streak.offset * 0.5;
+            const streakAngleDeg = trailAngleDeg + streak.drift;
+            const driftRad = (streakAngleDeg * Math.PI) / 180;
+            const driftX = Math.cos(driftRad);
+            const driftY = Math.sin(driftRad);
+            const trailCenterX = headX - driftX * trailLength * 0.5 + (-driftY) * off;
+            const trailCenterY = headY - driftY * trailLength * 0.5 + driftX * off;
+            el.style.width = `${trailLength}px`;
+            el.style.height = `${trailThickness}px`;
+            el.style.left = `${trailCenterX - trailLength / 2}px`;
+            el.style.top = `${trailCenterY - trailThickness / 2}px`;
+            el.style.opacity = `${streak.opacity * depthOpacity}`;
+            el.style.zIndex = `${zIndex - 1}`;
+            el.style.transform = `rotate(${streakAngleDeg}deg)`;
+          });
+        });
       } else if (pauseStart === 0) {
         pauseStart = Date.now();
       }
       frame = requestAnimationFrame(tick);
     };
+
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  const angle = phase * Math.PI * 2;
-  const tilt = -0.48 + Math.sin(phase * 1.2) * 0.06;
-  const positioned = ENTRIES.map((entry) => ({
-    ...entry,
-    point: projectPoint(entry, angle, tilt, radiusX, radiusY),
-    trailPoint: projectPoint(entry, angle - 0.34, tilt, radiusX, radiusY),
-    tailPoint: projectPoint(entry, angle - 0.66, tilt, radiusX, radiusY),
-  })).sort((a, b) => a.point.depth - b.point.depth);
+  // Compute initial positions at phase=0 for the first (and only) React render.
+  const initialPositioned = computePositioned(0, -0.48, radiusX, radiusY);
 
   return (
     <View style={[styles.shell, { width: panelWidth, height: panelHeight }]}>
       {ORBIT_RINGS.map((ring, index) => {
         const ringWidth = radiusX * 2 * ring.scale;
         const ringHeight = radiusY * 2 * ring.height;
-        const rotation = ring.offset + phase * 360 * ring.spin;
-
         return (
           <View
             key={index}
+            ref={(el) => { orbitRingEls.current[index] = el; }}
             style={[
               styles.orbitRing,
               {
@@ -354,7 +512,7 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
                 transform: [
                   { perspective: 1000 },
                   { rotateX: '64deg' },
-                  { rotateZ: `${rotation}deg` },
+                  { rotateZ: `${ring.offset}deg` },
                 ],
               },
             ]}
@@ -363,13 +521,13 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
       })}
 
       {ORBIT_SPARKS.map((spark, index) => {
-        const sparkAngle = angle * (0.9 + index * 0.16) + spark.phase;
+        const sparkAngle = spark.phase;
         const x = centerX + Math.cos(sparkAngle) * radiusX * spark.radius;
         const y = centerY + Math.sin(sparkAngle) * radiusY * 0.7 * spark.radius;
-
         return (
           <View
             key={index}
+            ref={(el) => { sparkEls.current[index] = el; }}
             style={[
               styles.orbitSpark,
               {
@@ -386,30 +544,34 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
         );
       })}
 
-      {positioned.map((entry) => {
-        const size = (52 + entry.point.depth * 44) * entry.size;
-        const left = centerX + entry.point.x - size / 2;
-        const top = centerY + entry.point.y - size / 2;
-        const trailDx = entry.point.x - entry.trailPoint.x;
-        const trailDy = entry.point.y - entry.trailPoint.y;
-        const tailDx = entry.point.x - entry.tailPoint.x;
-        const tailDy = entry.point.y - entry.tailPoint.y;
-        const directionLength = Math.max(1, Math.hypot(trailDx, trailDy));
-        const unitX = trailDx / directionLength;
-        const unitY = trailDy / directionLength;
-        const trailAngle = Math.atan2(unitY, unitX) * (180 / Math.PI);
+      {initialPositioned.map((entry) => {
+        const { point, trailPoint, tailPoint } = entry;
+        const size = (52 + point.depth * 44) * entry.size;
+        const left = centerX + point.x - size / 2;
+        const top = centerY + point.y - size / 2;
+        const headX = centerX + point.x;
+        const headY = centerY + point.y;
+        const trailDx = point.x - trailPoint.x;
+        const trailDy = point.y - trailPoint.y;
+        const tailDx = point.x - tailPoint.x;
+        const tailDy = point.y - tailPoint.y;
+        const dirLen = Math.max(1, Math.hypot(trailDx, trailDy));
+        const unitX = trailDx / dirLen;
+        const unitY = trailDy / dirLen;
+        const trailAngleDeg = Math.atan2(unitY, unitX) * (180 / Math.PI);
         const baseLength = Math.max(size * 1.6, Math.hypot(tailDx, tailDy) * 2.1);
-        const headX = centerX + entry.point.x;
-        const headY = centerY + entry.point.y;
-        const headBloomSize = size * (1.14 + entry.point.depth * 0.22);
-        const depthOpacity = 0.24 + entry.point.depth * 0.76;
-        const zIndex = Math.round(entry.point.depth * 100) + 10;
-        const floorShadowWidth = size * (0.86 + entry.point.depth * 0.18);
+        const headBloomSize = size * (1.14 + point.depth * 0.22);
+        const depthOpacity = 0.24 + point.depth * 0.76;
+        const zIndex = Math.round(point.depth * 100) + 10;
+        const floorShadowWidth = size * (0.86 + point.depth * 0.18);
         const floorShadowHeight = size * 0.18;
+        const yaw = -point.rawX * 18 + Math.sin(entry.lon) * 6;
+        const pitch = point.rawY * 10 - 4;
 
         return (
           <React.Fragment key={entry.token}>
             <View
+              ref={(el) => { entryEls.current[entry.token].floor = el; }}
               style={[
                 styles.floorShadow,
                 {
@@ -418,13 +580,14 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
                   borderRadius: floorShadowHeight,
                   left: headX - floorShadowWidth / 2,
                   top: headY + size * 0.36,
-                  opacity: 0.1 + entry.point.depth * 0.28,
+                  opacity: 0.1 + point.depth * 0.28,
                   shadowColor: entry.accent,
                   zIndex: zIndex - 2,
                 },
               ]}
             />
             <View
+              ref={(el) => { entryEls.current[entry.token].bloom = el; }}
               style={[
                 styles.headBloom,
                 {
@@ -434,7 +597,7 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
                   left: headX - headBloomSize / 2,
                   top: headY - headBloomSize / 2,
                   shadowColor: entry.accent,
-                  opacity: 0.08 + entry.point.depth * 0.28,
+                  opacity: 0.08 + point.depth * 0.28,
                   zIndex: zIndex - 1,
                 },
               ]}
@@ -442,19 +605,18 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
             {COMET_STREAKS.map((streak, streakIndex) => {
               const trailLength = baseLength * streak.length;
               const trailThickness = size * streak.thickness;
-              const offset = size * streak.offset * 0.5;
-              const angle = trailAngle + streak.drift;
-              const driftRadians = (angle * Math.PI) / 180;
-              const driftX = Math.cos(driftRadians);
-              const driftY = Math.sin(driftRadians);
-              const driftPerpX = -driftY;
-              const driftPerpY = driftX;
-              const trailCenterX = headX - driftX * trailLength * 0.5 + driftPerpX * offset;
-              const trailCenterY = headY - driftY * trailLength * 0.5 + driftPerpY * offset;
+              const off = size * streak.offset * 0.5;
+              const streakAngleDeg = trailAngleDeg + streak.drift;
+              const driftRad = (streakAngleDeg * Math.PI) / 180;
+              const driftX = Math.cos(driftRad);
+              const driftY = Math.sin(driftRad);
+              const trailCenterX = headX - driftX * trailLength * 0.5 + (-driftY) * off;
+              const trailCenterY = headY - driftY * trailLength * 0.5 + driftX * off;
 
               return (
                 <View
                   key={streakIndex}
+                  ref={(el) => { entryEls.current[entry.token].streaks[streakIndex] = el; }}
                   style={[
                     styles.trailWrap,
                     {
@@ -464,16 +626,16 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
                       top: trailCenterY - trailThickness / 2,
                       opacity: streak.opacity * depthOpacity,
                       zIndex: zIndex - 1,
-                      transform: [{ rotate: `${angle}deg` }],
+                      transform: [{ rotate: `${streakAngleDeg}deg` }],
                     },
                   ]}
                 >
                   <LinearGradient
                     colors={[
                       'rgba(255,255,255,0)',
-                      colorWithAlpha(entry.accent, 0),
-                      colorWithAlpha(entry.accent, 0.18),
-                      colorWithAlpha(entry.accent, 0.7),
+                      ENTRY_COLORS[entry.token].a0,
+                      ENTRY_COLORS[entry.token].a18,
+                      ENTRY_COLORS[entry.token].a7,
                       'rgba(255,255,255,0.92)',
                     ]}
                     locations={[0, 0.5, 0.72, 0.93, 1]}
@@ -485,6 +647,7 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
               );
             })}
             <View
+              ref={(el) => { entryEls.current[entry.token].wrap = el; }}
               style={[
                 styles.sphereWrap,
                 {
@@ -492,12 +655,19 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
                   height: size,
                   left,
                   top,
-                  opacity: Math.min(1, 0.56 + entry.point.depth * 0.58),
+                  opacity: Math.min(1, 0.56 + point.depth * 0.58),
                   zIndex,
                 },
               ]}
             >
-              <GlassOrb entry={entry} size={size} phase={phase} />
+              <GlassOrb
+                entry={entry}
+                size={size}
+                yaw={yaw}
+                pitch={pitch}
+                orbRef={(el) => { entryEls.current[entry.token].orb = el; }}
+                plateRef={(el) => { entryEls.current[entry.token].plate = el; }}
+              />
             </View>
           </React.Fragment>
         );
@@ -506,11 +676,10 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
       {ORBIT_RINGS.slice(0, 2).map((ring, index) => {
         const ringWidth = radiusX * 2 * (ring.scale + 0.04);
         const ringHeight = radiusY * 2 * (ring.height + 0.04);
-        const rotation = ring.offset + 18 + phase * 360 * ring.spin;
-
         return (
           <View
             key={index}
+            ref={(el) => { frontArcEls.current[index] = el; }}
             style={[
               styles.frontOrbitArc,
               {
@@ -523,7 +692,7 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
                 transform: [
                   { perspective: 1000 },
                   { rotateX: '64deg' },
-                  { rotateZ: `${rotation}deg` },
+                  { rotateZ: `${ring.offset + 18}deg` },
                 ],
               },
             ]}
@@ -561,14 +730,14 @@ const styles = StyleSheet.create({
   floorShadow: {
     position: 'absolute',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
+    shadowOpacity: 0,
+    shadowRadius: 0,
   },
   headBloom: {
     position: 'absolute',
     backgroundColor: 'rgba(255,255,255,0.1)',
-    shadowOpacity: 0.9,
-    shadowRadius: 24,
+    shadowOpacity: 0,
+    shadowRadius: 0,
   },
   trailWrap: {
     position: 'absolute',
