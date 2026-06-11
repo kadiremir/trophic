@@ -261,12 +261,17 @@ export default function Grid({
   });
 
   return (
-    <View style={[styles.container, { padding: GRID_PADDING }]}>
+    <View style={[styles.container, { padding: GRID_PADDING }, containerWidth ? { width: containerWidth } : null]}>
       <View
         pointerEvents="none"
         style={[
           styles.boardPanel,
-          {
+          containerWidth ? {
+            left: 0,
+            top: GRID_PADDING - BOARD_INSET,
+            width: containerWidth,
+            height: boardSize + BOARD_INSET * 2,
+          } : {
             left: GRID_PADDING + boardOffsetX - BOARD_INSET,
             top: GRID_PADDING - BOARD_INSET,
             width: boardSize + BOARD_INSET * 2,
@@ -423,7 +428,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignSelf: 'center',
     width: '100%',
-    maxWidth: 560,
   },
   boardPanel: {
     position: 'absolute',

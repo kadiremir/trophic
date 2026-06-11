@@ -477,26 +477,24 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
   );
 
   const gridNode = (
-    <View style={{ paddingHorizontal: sz(32) }}>
-      <Grid
-        grid={displayGrid}
-        onCellPress={phase === 'choosing' ? handleChoiceTap : undefined}
-        onDragStart={handleDragStart}
-        onDragHover={handleDragHover}
-        onDragEnd={handleDragEnd}
-        dragEnabled={phase === 'play' || phase === 'choosing'}
-        selected={selected}
-        hoveredCell={hoveredCell}
-        legalTargets={targets}
-        dangerCells={dangerCells}
-        choiceCells={choiceCells}
-        choicePredators={choicePredators}
-        jumpingFrom={jumpingFrom}
-        crunchCell={crunchCell}
-        scorePopups={scorePopups}
-        containerWidth={gridContainerWidth - sz(32) * 2}
-      />
-    </View>
+    <Grid
+      grid={displayGrid}
+      onCellPress={phase === 'choosing' ? handleChoiceTap : undefined}
+      onDragStart={handleDragStart}
+      onDragHover={handleDragHover}
+      onDragEnd={handleDragEnd}
+      dragEnabled={phase === 'play' || phase === 'choosing'}
+      selected={selected}
+      hoveredCell={hoveredCell}
+      legalTargets={targets}
+      dangerCells={dangerCells}
+      choiceCells={choiceCells}
+      choicePredators={choicePredators}
+      jumpingFrom={jumpingFrom}
+      crunchCell={crunchCell}
+      scorePopups={scorePopups}
+      containerWidth={gridContainerWidth - sz(32) * 2}
+    />
   );
 
   const overlays = (
