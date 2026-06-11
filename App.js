@@ -6,11 +6,13 @@ import GameScreen from './src/screens/GameScreen';
 import AuthButton from './src/components/AuthButton';
 import { onAuthChange, loadProgress, saveProgress } from './src/firebase';
 import { LEVELS } from './src/game/levels';
+import { useLayout } from './src/hooks/useLayout';
 
 // Bump this whenever levels change to reset all users' cloud progress.
 const PROGRESS_VERSION = 3;
 
 export default function App() {
+  const { isWide, contentWidth } = useLayout();
   const [screen, setScreen]       = useState('menu');
   const [levelIndex, setLvlIdx]   = useState(0);
   const [unlocked, setUnlocked]   = useState(1);
@@ -80,7 +82,7 @@ export default function App() {
   return (
     <View style={styles.root}>
       <AmbientBackground />
-      <View style={styles.appShell}>
+      <View style={[styles.appShell, { maxWidth: contentWidth }]}>
         <View style={styles.topChrome}>
           <View style={styles.authBar}>
             <AuthButton user={user ?? null} />
@@ -116,6 +118,9 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 480,
     alignSelf: 'center',
+  },
+  appShellWide: {
+    maxWidth: '100%',
   },
   topChrome: {
     width: '100%',

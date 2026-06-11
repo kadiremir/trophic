@@ -40,9 +40,14 @@ export default function Grid({
   jumpingFrom,
   crunchCell,
   scorePopups = [],
+  containerWidth,
 }) {
   const { width } = useWindowDimensions();
-  const gridWidth = Math.min(width - GRID_PADDING * 2, 460 - GRID_PADDING * 2);
+  // containerWidth is passed by the desktop layout so we size relative to the
+  // panel rather than the full window. Cap at 540 on desktop, 460 on mobile.
+  const gridWidth = containerWidth
+    ? containerWidth - GRID_PADDING * 2
+    : Math.min(width - GRID_PADDING * 2, 460 - GRID_PADDING * 2);
   const cellSize = Math.floor((gridWidth - CELL_GAP * (GRID_SIZE + 1)) / GRID_SIZE);
   const boardSize = GRID_SIZE * (cellSize + CELL_GAP);
   const boardOffsetX = Math.max(0, (gridWidth - boardSize) / 2);
@@ -418,7 +423,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignSelf: 'center',
     width: '100%',
-    maxWidth: 460,
+    maxWidth: 560,
   },
   boardPanel: {
     position: 'absolute',

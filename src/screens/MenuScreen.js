@@ -13,6 +13,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import { useLayout } from '../hooks/useLayout';
 import { LinearGradient } from 'expo-linear-gradient';
 import { LEVELS, TIER_META } from '../game/levels';
 import { PAL, PIECE_IMAGES } from '../game/constants';
@@ -31,6 +32,8 @@ function apexTokenForTier(chain) {
 }
 
 export default function MenuScreen({ unlocked, completed, onSelect, active = true }) {
+  const { isWide, scale, contentWidth } = useLayout();
+  const sz = (n) => Math.round(n * scale);
   const [showHowToPlay, setShowHowToPlay] = React.useState(false);
 
   // First unlocked level that hasn't been completed yet
@@ -73,18 +76,104 @@ export default function MenuScreen({ unlocked, completed, onSelect, active = tru
     });
   };
 
+  const tierList = TIER_META.map((tier, ti) => {
+    const isExpanded = expandedTiers.has(ti);
+    const allLocked = tier.levels.every((li) => li >= unlocked);
+    const completedCount = tier.levels.filter((li) => completed.has(li)).length;
+    const apexToken = apexTokenForTier(tier.chain);
+    return (
+      <View
+        key={ti}
+        style={[styles.tierWrapper, { marginBottom: sz(12), paddingHorizontal: sz(32) }]}
+        onLayout={(e) => { tierYs.current[ti] = e.nativeEvent.layout.y; }}
+      >
+        <TierCard
+          tier={tier}
+          levels={LEVELS}
+          unlocked={unlocked}
+          completed={completed}
+          nextLevel={nextLevel}
+          isExpanded={isExpanded}
+          allLocked={allLocked}
+          completedCount={completedCount}
+          apexToken={apexToken}
+          onToggle={() => !allLocked && toggleTier(ti)}
+          onSelect={onSelect}
+          scale={scale}
+        />
+      </View>
+    );
+  });
+
+  if (isWide) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <StatusBar barStyle="light-content" backgroundColor="#070b06" />
+        <View style={styles.wideRow}>
+          {/* Left column: branding + meta */}
+          <View style={styles.wideLeft}>
+            <ScrollView
+              style={styles.wideColScroll}
+              contentContainerStyle={styles.wideLeftContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.wideHero}>
+                <TrophicHeroBrand wide />
+                <FoodChainShowcase active={active} containerWidth={380} />
+              </View>
+              {nextLevel >= 0 && (
+                <ContinueButton
+                  subLabel={`Next Level: ${LEVELS[nextLevel].id}`}
+                  accent={currentTierIndex >= 0 ? TIER_META[currentTierIndex].color : '#ff9824'}
+                  onPress={() => onSelect(nextLevel)}
+                />
+              )}
+              <ProgressSummary
+                tiers={TIER_META}
+                levels={LEVELS}
+                unlocked={unlocked}
+                completed={completed}
+              />
+              <HowToPlayButton onPress={() => setShowHowToPlay(true)} />
+            </ScrollView>
+          </View>
+
+          {/* Divider */}
+          <View style={styles.wideDivider} />
+
+          {/* Right column: tier accordion */}
+          <View style={styles.wideRight}>
+            <ScrollView
+              ref={scrollRef}
+              style={styles.wideColScroll}
+              contentContainerStyle={styles.wideRightContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {tierList}
+            </ScrollView>
+          </View>
+        </View>
+
+        <HowToPlayModal
+          visible={showHowToPlay}
+          onClose={() => setShowHowToPlay(false)}
+        />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor="#070b06" />
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { maxWidth: contentWidth }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.hero}>
-          <TrophicHeroBrand />
-          <FoodChainShowcase active={active} />
+        <View style={[styles.hero, { paddingBottom: sz(24), paddingHorizontal: sz(32) }]}>
+          <TrophicHeroBrand scale={scale} />
+          <FoodChainShowcase active={active} containerWidth={contentWidth} />
         </View>
 
         {nextLevel >= 0 && (
@@ -100,36 +189,10 @@ export default function MenuScreen({ unlocked, completed, onSelect, active = tru
           levels={LEVELS}
           unlocked={unlocked}
           completed={completed}
+          scale={scale}
         />
 
-        {TIER_META.map((tier, ti) => {
-          const isExpanded = expandedTiers.has(ti);
-          const allLocked = tier.levels.every((li) => li >= unlocked);
-          const completedCount = tier.levels.filter((li) => completed.has(li)).length;
-          const apexToken = apexTokenForTier(tier.chain);
-
-          return (
-            <View
-              key={ti}
-              style={styles.tierWrapper}
-              onLayout={(e) => { tierYs.current[ti] = e.nativeEvent.layout.y; }}
-            >
-              <TierCard
-                tier={tier}
-                levels={LEVELS}
-                unlocked={unlocked}
-                completed={completed}
-                nextLevel={nextLevel}
-                isExpanded={isExpanded}
-                allLocked={allLocked}
-                completedCount={completedCount}
-                apexToken={apexToken}
-                onToggle={() => !allLocked && toggleTier(ti)}
-                onSelect={onSelect}
-              />
-            </View>
-          );
-        })}
+        {tierList}
 
         <HowToPlayButton onPress={() => setShowHowToPlay(true)} />
       </ScrollView>
@@ -143,7 +206,8 @@ export default function MenuScreen({ unlocked, completed, onSelect, active = tru
 }
 
 // ── ProgressSummary ──────────────────────────────────────────────────────────
-function ProgressSummary({ tiers, levels, unlocked, completed }) {
+function ProgressSummary({ tiers, levels, unlocked, completed, scale = 1 }) {
+  const sz = (n) => Math.round(n * scale);
   const totalCompleted = completed.size;
   const totalLevels = levels.length;
 
@@ -153,10 +217,10 @@ function ProgressSummary({ tiers, levels, unlocked, completed }) {
   );
 
   return (
-    <View style={psStyles.card}>
+    <View style={[psStyles.card, { marginHorizontal: sz(32), marginBottom: sz(20), paddingVertical: sz(14), paddingHorizontal: sz(16), gap: sz(10) }]}>
       <View style={psStyles.headerRow}>
-        <Text style={psStyles.headerLabel}>OVERALL PROGRESS</Text>
-        <Text style={psStyles.headerCount}>{totalCompleted} / {totalLevels}</Text>
+        <Text style={[psStyles.headerLabel, { fontSize: sz(10) }]}>OVERALL PROGRESS</Text>
+        <Text style={[psStyles.headerCount, { fontSize: sz(13) }]}>{totalCompleted} / {totalLevels}</Text>
       </View>
 
       <View style={psStyles.segmentBar}>
@@ -196,9 +260,9 @@ function ProgressSummary({ tiers, levels, unlocked, completed }) {
 
           if (!tierUnlocked) {
             return (
-              <View key={ti} style={[psStyles.pill, psStyles.pillLocked]}>
-                <Text style={psStyles.pillLockEmoji}>🔒</Text>
-                <Text style={[psStyles.pillLabel, { color: 'rgba(255,255,255,0.28)' }]}>
+              <View key={ti} style={[psStyles.pill, psStyles.pillLocked, { paddingTop: sz(6), paddingBottom: sz(5), paddingHorizontal: sz(4), gap: sz(2) }]}>
+                <Text style={[psStyles.pillLockEmoji, { fontSize: sz(10) }]}>🔒</Text>
+                <Text style={[psStyles.pillLabel, { color: 'rgba(255,255,255,0.28)', fontSize: sz(8) }]}>
                   {firstWord}
                 </Text>
               </View>
@@ -210,15 +274,16 @@ function ProgressSummary({ tiers, levels, unlocked, completed }) {
               key={ti}
               style={[
                 psStyles.pill,
+                { paddingTop: sz(6), paddingBottom: sz(5), paddingHorizontal: sz(4), gap: sz(2) },
                 isActive
                   ? { backgroundColor: `${tier.color}18`, borderColor: `${tier.color}66` }
                   : { backgroundColor: `${tier.color}0d`, borderColor: `${tier.color}28` },
               ]}
             >
-              <Text style={[psStyles.pillCount, { color: tier.color }]}>
+              <Text style={[psStyles.pillCount, { color: tier.color, fontSize: sz(10) }]}>
                 {tierDone}/{tierLevels.length}
               </Text>
-              <Text style={[psStyles.pillLabel, { color: isActive ? tier.color : `${tier.color}99` }]}>
+              <Text style={[psStyles.pillLabel, { color: isActive ? tier.color : `${tier.color}99`, fontSize: sz(8) }]}>
                 {firstWord}
               </Text>
             </View>
@@ -361,8 +426,9 @@ function CometSweep({ color, visible }) {
 function TierCard({
   tier, levels, unlocked, completed, nextLevel,
   isExpanded, allLocked, completedCount, apexToken,
-  onToggle, onSelect,
+  onToggle, onSelect, scale = 1,
 }) {
+  const sz = (n) => Math.round(n * scale);
   // Both layouts stay mounted at all times — toggling display:none instead of
   // unmounting prevents Lottie from being destroyed and re-initialized on every
   // open/close, which caused the browser to freeze on rapid taps.
@@ -372,23 +438,23 @@ function TierCard({
       <TouchableOpacity
         onPress={onToggle}
         activeOpacity={0.8}
-        style={[styles.tierPill, { borderColor: tier.color, display: isExpanded ? 'none' : 'flex' }]}
+        style={[styles.tierPill, { borderColor: tier.color, display: isExpanded ? 'none' : 'flex', paddingVertical: sz(10), paddingLeft: sz(12), paddingRight: sz(18), gap: sz(14) }]}
       >
         {allLocked && <CometSweep color={tier.color} visible={!isExpanded} />}
-        <View style={[styles.tierPillIcon, { borderColor: tier.color, backgroundColor: `${tier.color}22` }]}>
+        <View style={[styles.tierPillIcon, { borderColor: tier.color, backgroundColor: `${tier.color}22`, width: sz(46), height: sz(46), borderRadius: sz(23) }]}>
           {allLocked
-            ? <Text style={styles.tierPillIconText}>🔒</Text>
-            : <PieceIcon token={apexToken} size={28} />}
+            ? <Text style={[styles.tierPillIconText, { fontSize: sz(18) }]}>🔒</Text>
+            : <PieceIcon token={apexToken} size={sz(28)} />}
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.tierPillLabel, { color: tier.color }]}>{tier.label}</Text>
-          <Text style={styles.tierPillSub}>
+          <Text style={[styles.tierPillLabel, { color: tier.color, fontSize: sz(14) }]}>{tier.label}</Text>
+          <Text style={[styles.tierPillSub, { fontSize: sz(10) }]}>
             {allLocked
               ? `${tier.levels.length} levels locked`
               : `${completedCount}/${tier.levels.length} completed`}
           </Text>
         </View>
-        <Text style={[styles.tierChevron, { color: `${tier.color}aa` }]}>›</Text>
+        <Text style={[styles.tierChevron, { color: `${tier.color}aa`, fontSize: sz(22) }]}>›</Text>
       </TouchableOpacity>
 
       {/* Expanded card — hidden when collapsed */}
@@ -399,11 +465,11 @@ function TierCard({
           style={styles.tierCardHeader}
         >
           {allLocked
-            ? <Text style={styles.tierCardHeaderIcon}>🔒</Text>
-            : <PieceIcon token={apexToken} size={28} />}
+            ? <Text style={[styles.tierCardHeaderIcon, { fontSize: sz(18) }]}>🔒</Text>
+            : <PieceIcon token={apexToken} size={sz(28)} />}
           <View style={{ flex: 1 }}>
-            <Text style={[styles.tierCardHeaderLabel, { color: tier.color }]}>{tier.label}</Text>
-            <Text style={styles.tierCardHeaderSub}>
+            <Text style={[styles.tierCardHeaderLabel, { color: tier.color, fontSize: sz(13) }]}>{tier.label}</Text>
+            <Text style={[styles.tierCardHeaderSub, { fontSize: sz(10) }]}>
               {allLocked
                 ? `${tier.levels.length} levels locked`
                 : `${completedCount}/${tier.levels.length} completed`}
@@ -412,7 +478,7 @@ function TierCard({
           <Text style={styles.tierCardChevronOpen}>›</Text>
         </TouchableOpacity>
 
-        <View style={styles.tierCardRows}>
+        <View style={[styles.tierCardRows, { padding: sz(10), gap: sz(7) }]}>
           {tier.levels.map((li, rowIdx) => {
             const lv = levels[li];
             const locked = li >= unlocked;
@@ -427,7 +493,7 @@ function TierCard({
                 activeOpacity={0.75}
                 style={[
                   styles.lvRowCard,
-                  { transform: [{ rotate: rowIdx % 2 === 0 ? '0.3deg' : '-0.3deg' }] },
+                  { transform: [{ rotate: rowIdx % 2 === 0 ? '0.3deg' : '-0.3deg' }], paddingVertical: sz(9), paddingHorizontal: sz(12), gap: sz(10), marginBottom: sz(4) },
                   locked && styles.lvRowCardLocked,
                 ]}
               >
@@ -436,16 +502,17 @@ function TierCard({
                   {
                     backgroundColor: done ? '#1a1a1a' : locked ? '#ddd' : tier.color,
                     borderColor: '#1a1a1a',
+                    width: sz(28), height: sz(28), borderRadius: sz(6),
                   },
                 ]}>
-                  <Text style={[styles.lvRowNumText, { color: done ? tier.color : locked ? '#aaa' : '#fff' }]}>
+                  <Text style={[styles.lvRowNumText, { color: done ? tier.color : locked ? '#aaa' : '#fff', fontSize: sz(12) }]}>
                     {done ? '✓' : lv.id}
                   </Text>
                 </View>
 
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.lvRowName, locked && { color: '#aaa' }]}>{lv.name}</Text>
-                  <Text style={[styles.lvRowObj, locked && { color: '#ccc' }]}>{lv.objective.label}</Text>
+                  <Text style={[styles.lvRowName, { fontSize: sz(12) }, locked && { color: '#aaa' }]}>{lv.name}</Text>
+                  <Text style={[styles.lvRowObj, { fontSize: sz(10) }, locked && { color: '#ccc' }]}>{lv.objective.label}</Text>
                 </View>
 
                 {locked && (
@@ -478,7 +545,17 @@ const HERO_STARS = [
   { left: '96%', top: 42, size: 1, opacity: 0.38 },
 ];
 
-function TrophicHeroBrand() {
+function TrophicHeroBrand({ wide = false, scale = 1 }) {
+  const { width: viewportWidth, contentWidth: cw } = useLayout();
+  const sz = (n) => Math.round(n * scale);
+  // Compute a font size that actually fits in the available container width on web.
+  // heroBrand padding = sz(16)*2; appShell width = min(viewport, contentWidth).
+  const appShellWidth = Math.min(viewportWidth, cw);
+  const titleAvailableWidth = appShellWidth - sz(32) * 2 - sz(16) * 2;
+  // Empirical: "TROPHIC" at 96px = ~548px wide, of which 24px is fixed letter-spacing (6 gaps × 4px).
+  // Character width per em = (548-24)/(7×96) ≈ 0.779. Letter-spacing is constant regardless of size.
+  // Max fontSize = (availableWidth - 24) / (7 × 0.779)
+  const titleFontSize = Math.min(sz(64), Math.floor((titleAvailableWidth - 24) / 5.5));
   const glow = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
@@ -511,7 +588,7 @@ function TrophicHeroBrand() {
   } : {};
 
   return (
-    <View style={styles.heroBrand}>
+    <View style={[styles.heroBrand, wide && styles.heroBrandWide, { height: sz(140), paddingHorizontal: sz(16), paddingTop: sz(8), marginBottom: sz(10) }]}>
       {HERO_STARS.map((star, index) => (
         <View
           key={index}
@@ -531,11 +608,11 @@ function TrophicHeroBrand() {
         numberOfLines={1}
         adjustsFontSizeToFit
         nativeID={Platform.OS === 'web' ? 'trophic-logo-title' : undefined}
-        style={[styles.title, titleGlow]}
+        style={[styles.title, wide && styles.titleWide, { fontSize: titleFontSize, lineHeight: Math.round(titleFontSize * 1.19) }, titleGlow]}
       >
         TROPHIC
       </Animated.Text>
-      <Text style={styles.subtitle}>CHAIN OF NATURE</Text>
+      <Text style={[styles.subtitle, wide && styles.subtitleWide, { fontSize: Math.round(titleFontSize * 0.2), marginTop: sz(10) }]}>CHAIN OF NATURE</Text>
     </View>
   );
 }
@@ -747,8 +824,22 @@ function FlowArrow({ compact = false }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: 'transparent' },
   scroll: { flex: 1 },
-  content: { paddingBottom: 40 },
+  content: { paddingBottom: 40, maxWidth: 600, width: '100%', alignSelf: 'center' },
   hero: { alignItems: 'center', paddingTop: 0, paddingBottom: 24, paddingHorizontal: 20 },
+
+  // ── Wide layout ─────────────────────────────────────────────────────────
+  wideRow: { flex: 1, flexDirection: 'row' },
+  wideLeft: { width: 380, flexShrink: 0, borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.07)' },
+  wideColScroll: { flex: 1 },
+  wideLeftContent: { paddingBottom: 40 },
+  wideHero: { alignItems: 'center', paddingTop: 0, paddingBottom: 16, paddingHorizontal: 16 },
+  wideRight: { flex: 1 },
+  wideRightContent: { paddingTop: 16, paddingBottom: 40, maxWidth: 560, alignSelf: 'center', width: '100%' },
+  wideDivider: { width: 1, flexShrink: 0, backgroundColor: 'rgba(255,255,255,0.06)' },
+
+  heroBrandWide: { height: 140, marginHorizontal: -16, paddingHorizontal: 12 },
+  titleWide: { fontSize: 52, lineHeight: 64, letterSpacing: 2 },
+  subtitleWide: { fontSize: 12, letterSpacing: 5 },
   heroBrand: {
     alignSelf: 'stretch',
     alignItems: 'center',
@@ -756,7 +847,7 @@ const styles = StyleSheet.create({
     height: 140,
     paddingHorizontal: 16,
     paddingTop: 8,
-    marginHorizontal: -20,
+    marginHorizontal: 0,
     marginBottom: 10,
     backgroundColor: 'transparent',
     overflow: 'hidden',

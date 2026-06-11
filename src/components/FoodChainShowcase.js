@@ -287,10 +287,11 @@ function GlassOrb({ entry, size, phase }) {
   );
 }
 
-export default function FoodChainShowcase({ active = true }) {
+export default function FoodChainShowcase({ active = true, containerWidth }) {
   const { width } = useWindowDimensions();
-  const isWide = width >= 720;
-  const panelWidth = Math.min(width - 32, isWide ? 900 : 420);
+  const effectiveWidth = containerWidth || width;
+  const isWide = effectiveWidth >= 720;
+  const panelWidth = Math.min(effectiveWidth - 32, isWide ? 900 : 420);
   const panelHeight = Math.min(250, Math.max(210, Math.round(panelWidth * (isWide ? 0.4 : 0.52))));
   const centerX = panelWidth / 2;
   const centerY = panelHeight * 0.46;

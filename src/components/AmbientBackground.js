@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, Image, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const BACKGROUND_IMAGE_PORTRAIT = require('../../assets/backgrounds/forest-night.png');
+const BACKGROUND_IMAGE_PORTRAIT = require('../../assets/backgrounds/forest-night-mobile.png');
 const BACKGROUND_IMAGE_LANDSCAPE = require('../../assets/backgrounds/forest-night-desktop.png');
 
 const STAR_SPECS = Array.from({ length: 40 }, (_, index) => ({
@@ -171,8 +171,7 @@ export default function AmbientBackground() {
   const { width, height } = useWindowDimensions();
   const fireflies = useMemo(() => FIREFLY_SPECS, []);
   const leaves = useMemo(() => LEAF_SPECS, []);
-  const useLandscapeBackground = width >= 960 && width > height;
-  const backgroundImage = useLandscapeBackground ? BACKGROUND_IMAGE_LANDSCAPE : BACKGROUND_IMAGE_PORTRAIT;
+  const backgroundImage = BACKGROUND_IMAGE_PORTRAIT;
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
