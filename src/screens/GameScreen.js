@@ -486,53 +486,54 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
           </TouchableOpacity>
         </View>
 
-        {phase === 'win' && (
-          <ResultOverlay>
-            <View style={styles.overlayCard}>
-              <LottieAnimation
-                source={completedAnimation}
-                autoPlay={true}
-                loop={false}
-                style={styles.winLottie}
-              />
-              <Text style={styles.overlayTitle}>Level Complete!</Text>
-              <Text style={[styles.overlayScore, { color: '#3a6b1f' }]}>{score} pts</Text>
-              {maxCombo >= 2 && (
-                <Text style={styles.overlayCombo}>Best chain: x{maxCombo}</Text>
-              )}
-              <View style={styles.overlayBtns}>
-                <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#8fe06f' }]} onPress={onComplete}>
-                  <Text style={styles.overlayBtnText}>Next Level</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#ffd98a' }]} onPress={reset}>
-                  <Text style={styles.overlayBtnText}>Replay</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#efe3cb' }]} onPress={onBack}>
-                  <Text style={styles.overlayBtnText}>Level Select</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </ResultOverlay>
-        )}
-
-        {phase === 'lose' && (
-          <ResultOverlay>
-            <View style={styles.overlayCard}>
-              <Text style={styles.overlayEmoji}>Stop</Text>
-              <Text style={styles.overlayTitle}>Out of Moves</Text>
-              <Text style={[styles.overlayScore, { color: PAPER.inkSoft }]}>{score} / {level.objective.target || '?'}</Text>
-              <View style={styles.overlayBtns}>
-                <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#ff9a9a' }]} onPress={reset}>
-                  <Text style={styles.overlayBtnText}>Try Again</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#efe3cb' }]} onPress={onBack}>
-                  <Text style={styles.overlayBtnText}>Level Select</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </ResultOverlay>
-        )}
       </ScrollView>
+
+      {phase === 'win' && (
+        <ResultOverlay>
+          <View style={styles.overlayCard}>
+            <LottieAnimation
+              source={completedAnimation}
+              autoPlay={true}
+              loop={false}
+              style={styles.winLottie}
+            />
+            <Text style={styles.overlayTitle}>Level Complete!</Text>
+            <Text style={[styles.overlayScore, { color: '#3a6b1f' }]}>{score} pts</Text>
+            {maxCombo >= 2 && (
+              <Text style={styles.overlayCombo}>Best chain: x{maxCombo}</Text>
+            )}
+            <View style={styles.overlayBtns}>
+              <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#8fe06f' }]} onPress={onComplete}>
+                <Text style={styles.overlayBtnText}>Next Level</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#ffd98a' }]} onPress={reset}>
+                <Text style={styles.overlayBtnText}>Replay</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#efe3cb' }]} onPress={onBack}>
+                <Text style={styles.overlayBtnText}>Level Select</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ResultOverlay>
+      )}
+
+      {phase === 'lose' && (
+        <ResultOverlay>
+          <View style={styles.overlayCard}>
+            <Text style={styles.overlayEmoji}>Stop</Text>
+            <Text style={styles.overlayTitle}>Out of Moves</Text>
+            <Text style={[styles.overlayScore, { color: PAPER.inkSoft }]}>{score} / {level.objective.target || '?'}</Text>
+            <View style={styles.overlayBtns}>
+              <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#ff9a9a' }]} onPress={reset}>
+                <Text style={styles.overlayBtnText}>Try Again</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#efe3cb' }]} onPress={onBack}>
+                <Text style={styles.overlayBtnText}>Level Select</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ResultOverlay>
+      )}
     </SafeAreaView>
   );
 }
