@@ -67,6 +67,13 @@ ENTRIES.forEach((entry) => {
   };
 });
 
+// Pre-parsed "r,g,b" strings for building rgba() in the hot RAF path without parseInt.
+const ENTRY_RGB = {};
+ENTRIES.forEach((entry) => {
+  const v = entry.accent.replace('#', '');
+  ENTRY_RGB[entry.token] = `${parseInt(v.slice(0, 2), 16)},${parseInt(v.slice(2, 4), 16)},${parseInt(v.slice(4, 6), 16)}`;
+});
+
 function projectPoint(entry, angle, tilt, radiusX, radiusY) {
   const lon = entry.lon + angle;
   const x = Math.cos(entry.lat) * Math.cos(lon);
@@ -381,8 +388,7 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
           const sparkAngle = angle * (0.9 + i * 0.16) + spark.phase;
           const x = cx + Math.cos(sparkAngle) * rx * spark.radius;
           const y = cy + Math.sin(sparkAngle) * ry * 0.7 * spark.radius;
-          el.style.left = `${x - spark.size / 2}px`;
-          el.style.top = `${y - spark.size / 2}px`;
+          el.style.transform = `translateX(${x - spark.size / 2}px) translateY(${y - spark.size / 2}px) rotate(45deg)`;
         });
 
         // Entries
@@ -400,8 +406,7 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
           const depthOpacity = 0.24 + point.depth * 0.76;
 
           if (els.wrap) {
-            els.wrap.style.left = `${left}px`;
-            els.wrap.style.top = `${top}px`;
+            els.wrap.style.transform = `translateX(${left}px) translateY(${top}px)`;
             els.wrap.style.width = `${size}px`;
             els.wrap.style.height = `${size}px`;
             els.wrap.style.opacity = `${Math.min(1, 0.56 + point.depth * 0.58)}`;
@@ -415,8 +420,8 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
             els.orb.style.width = `${size}px`;
             els.orb.style.height = `${size}px`;
             els.orb.style.borderRadius = `${size / 2}px`;
-            els.orb.style.borderColor = colorWithAlpha(entry.accent, 0.44 + point.depth * 0.3);
-            els.orb.style.backgroundColor = colorWithAlpha(entry.accent, 0.04 + point.depth * 0.04);
+            els.orb.style.borderColor = `rgba(${ENTRY_RGB[entry.token]},${(0.44 + point.depth * 0.3).toFixed(3)})`;
+            els.orb.style.backgroundColor = `rgba(${ENTRY_RGB[entry.token]},${(0.04 + point.depth * 0.04).toFixed(3)})`;
           }
 
           if (els.plate) {
@@ -430,8 +435,7 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
             els.floor.style.width = `${floorShadowWidth}px`;
             els.floor.style.height = `${floorShadowHeight}px`;
             els.floor.style.borderRadius = `${floorShadowHeight}px`;
-            els.floor.style.left = `${headX - floorShadowWidth / 2}px`;
-            els.floor.style.top = `${headY + size * 0.36}px`;
+            els.floor.style.transform = `translateX(${headX - floorShadowWidth / 2}px) translateY(${headY + size * 0.36}px)`;
             els.floor.style.opacity = `${0.1 + point.depth * 0.28}`;
             els.floor.style.zIndex = `${zIndex - 2}`;
           }
@@ -441,8 +445,7 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
             els.bloom.style.width = `${headBloomSize}px`;
             els.bloom.style.height = `${headBloomSize}px`;
             els.bloom.style.borderRadius = `${headBloomSize / 2}px`;
-            els.bloom.style.left = `${headX - headBloomSize / 2}px`;
-            els.bloom.style.top = `${headY - headBloomSize / 2}px`;
+            els.bloom.style.transform = `translateX(${headX - headBloomSize / 2}px) translateY(${headY - headBloomSize / 2}px)`;
             els.bloom.style.opacity = `${0.08 + point.depth * 0.28}`;
             els.bloom.style.zIndex = `${zIndex - 1}`;
           }
@@ -471,11 +474,9 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
             const trailCenterY = headY - driftY * trailLength * 0.5 + driftX * off;
             el.style.width = `${trailLength}px`;
             el.style.height = `${trailThickness}px`;
-            el.style.left = `${trailCenterX - trailLength / 2}px`;
-            el.style.top = `${trailCenterY - trailThickness / 2}px`;
+            el.style.transform = `translateX(${trailCenterX - trailLength / 2}px) translateY(${trailCenterY - trailThickness / 2}px) rotate(${streakAngleDeg}deg)`;
             el.style.opacity = `${streak.opacity * depthOpacity}`;
             el.style.zIndex = `${zIndex - 1}`;
-            el.style.transform = `rotate(${streakAngleDeg}deg)`;
           });
         });
       } else if (pauseStart === 0) {
@@ -533,11 +534,14 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
               {
                 width: spark.size,
                 height: spark.size,
-                left: x - spark.size / 2,
-                top: y - spark.size / 2,
+                left: 0,
+                top: 0,
                 backgroundColor: spark.color,
-                shadowColor: spark.color,
-                transform: [{ rotate: '45deg' }],
+                transform: [
+                  { translateX: x - spark.size / 2 },
+                  { translateY: y - spark.size / 2 },
+                  { rotate: '45deg' },
+                ],
               },
             ]}
           />
@@ -578,10 +582,10 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
                   width: floorShadowWidth,
                   height: floorShadowHeight,
                   borderRadius: floorShadowHeight,
-                  left: headX - floorShadowWidth / 2,
-                  top: headY + size * 0.36,
+                  left: 0,
+                  top: 0,
+                  transform: [{ translateX: headX - floorShadowWidth / 2 }, { translateY: headY + size * 0.36 }],
                   opacity: 0.1 + point.depth * 0.28,
-                  shadowColor: entry.accent,
                   zIndex: zIndex - 2,
                 },
               ]}
@@ -594,9 +598,9 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
                   width: headBloomSize,
                   height: headBloomSize,
                   borderRadius: headBloomSize / 2,
-                  left: headX - headBloomSize / 2,
-                  top: headY - headBloomSize / 2,
-                  shadowColor: entry.accent,
+                  left: 0,
+                  top: 0,
+                  transform: [{ translateX: headX - headBloomSize / 2 }, { translateY: headY - headBloomSize / 2 }],
                   opacity: 0.08 + point.depth * 0.28,
                   zIndex: zIndex - 1,
                 },
@@ -622,11 +626,15 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
                     {
                       width: trailLength,
                       height: trailThickness,
-                      left: trailCenterX - trailLength / 2,
-                      top: trailCenterY - trailThickness / 2,
+                      left: 0,
+                      top: 0,
+                      transform: [
+                        { translateX: trailCenterX - trailLength / 2 },
+                        { translateY: trailCenterY - trailThickness / 2 },
+                        { rotate: `${streakAngleDeg}deg` },
+                      ],
                       opacity: streak.opacity * depthOpacity,
                       zIndex: zIndex - 1,
-                      transform: [{ rotate: `${streakAngleDeg}deg` }],
                     },
                   ]}
                 >
@@ -653,8 +661,9 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
                 {
                   width: size,
                   height: size,
-                  left,
-                  top,
+                  left: 0,
+                  top: 0,
+                  transform: [{ translateX: left }, { translateY: top }],
                   opacity: Math.min(1, 0.56 + point.depth * 0.58),
                   zIndex,
                 },
@@ -724,8 +733,6 @@ const styles = StyleSheet.create({
   orbitSpark: {
     position: 'absolute',
     borderRadius: 1,
-    shadowOpacity: 0.85,
-    shadowRadius: 8,
   },
   floorShadow: {
     position: 'absolute',
@@ -774,16 +781,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
   },
   glassSparkle: {
     position: 'absolute',
     borderRadius: 999,
     backgroundColor: '#ffffff',
-    shadowColor: '#ffffff',
-    shadowOpacity: 0.8,
-    shadowRadius: 5,
   },
   mainHighlight: {
     position: 'absolute',

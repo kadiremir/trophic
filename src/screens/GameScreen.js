@@ -343,15 +343,17 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
       return;
     }
 
-    const targets = getLegalTargets(displayGrid, sr, sc);
-    if (!targets.has(cellKey(r, c))) return;
+    if (!targetsRef.current.has(cellKey(r, c))) return;
 
     runMove(sr, sc, r, c);
-  }, [displayGrid, findChoiceOption, handleChoiceSelect, phase, runMove, selected]);
+  }, [findChoiceOption, handleChoiceSelect, runMove, selected]);
+
+  const targetsRef = useRef(new Set());
 
   const targets = useMemo(() => {
     if (selected && phase === 'play')
       return getLegalTargets(displayGrid, selected[0], selected[1]);
+
     if (selected && phase === 'choosing' && pendingChoice)
       return new Set(
         pendingChoice.options
@@ -373,10 +375,12 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
       : new Set(),
   [phase, pendingChoice]);
 
+  targetsRef.current = targets;
+
   const pct = Math.min(100, Math.round((score / (level.objective.target || 1)) * 100));
 
   // ── Shared sub-sections ────────────────────────────────────────────────────
-  const headerNode = (
+  const headerNode = useMemo(() => (
     <View style={[styles.header, { paddingHorizontal: sz(32), paddingTop: sz(14), paddingBottom: sz(6) }]}>
       <TouchableOpacity onPress={onBack} style={[styles.backBtn, { width: sz(44), height: sz(44), borderRadius: sz(17) }]}>
         <View style={[styles.backChevron, { width: sz(13), height: sz(13) }]} />
@@ -394,23 +398,23 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
         <Text style={[styles.backText, { fontSize: sz(16) }, showHint && { color: '#1a1422' }]}>i</Text>
       </TouchableOpacity>
     </View>
-  );
+  ), [onBack, sz, tierColor, level, showHint]);
 
-  const hintNode = showHint && (
+  const hintNode = useMemo(() => showHint ? (
     <View style={[styles.hintBox, { padding: sz(10), marginHorizontal: sz(32) }]}>
       <Text style={[styles.hintText, { fontSize: sz(12), lineHeight: sz(18) }]}>{level.hint}</Text>
     </View>
-  );
+  ) : null, [showHint, sz, level]);
 
-  const statsNode = (
+  const statsNode = useMemo(() => (
     <View style={[styles.statsRow, { paddingHorizontal: sz(32), paddingBottom: sz(6), gap: sz(8) }]}>
       <StatBox label="Score" value={score} color="#e8d9a8" scale={scale} />
       <StatBox label="Moves" value={moves} color={moves <= 2 ? '#e07a6a' : '#e8d9a8'} scale={scale} />
       <StatBox label="Combo" value={maxCombo > 0 ? `x${maxCombo}` : '-'} color="#d4af37" scale={scale} />
     </View>
-  );
+  ), [score, moves, maxCombo, sz, scale]);
 
-  const goalNode = (
+  const goalNode = useMemo(() => (
     <View style={[styles.goalCard, { marginHorizontal: sz(32), paddingHorizontal: sz(14), paddingVertical: sz(12) }]}>
       <View style={styles.goalHeader}>
         <Text style={[styles.goalEyebrow, { fontSize: sz(10) }]}>Target Score</Text>
@@ -425,15 +429,15 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
       <ProgressBar pct={pct} color="#d4af37" />
       <Text style={[styles.goalCaption, { fontSize: sz(12), marginTop: sz(8) }]}>{level.objective.label}</Text>
     </View>
-  );
+  ), [score, pct, sz, level]);
 
-  const flashNode = flashMsg && (
+  const flashNode = useMemo(() => flashMsg ? (
     <View style={[styles.flash, { borderColor: `${flashMsg.color}55`, paddingHorizontal: sz(22), paddingVertical: sz(9) }]}>
       <Text style={[styles.flashText, { color: flashMsg.color, fontSize: sz(14) }]}>{flashMsg.msg}</Text>
     </View>
-  );
+  ) : null, [flashMsg, sz]);
 
-  const instrNode = (
+  const instrNode = useMemo(() => (
     <Text style={[styles.instr, { fontSize: sz(11) }]}>
       {phase === 'animating'
         ? 'Watch the chain resolve.'
@@ -443,9 +447,9 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
         ? 'Keep dragging to a highlighted cell, or drag back to cancel.'
         : 'Drag an animal to an empty cell or directly onto its prey.'}
     </Text>
-  );
+  ), [phase, selected, sz]);
 
-  const choiceNode = phase === 'choosing' && pendingChoice && (
+  const choiceNode = useMemo(() => phase === 'choosing' && pendingChoice ? (
     <View style={[styles.choiceBox, { marginHorizontal: sz(32) }]}>
       <Text style={[styles.choiceTitle, { fontSize: sz(13) }]}>Choose the next forced eat</Text>
       {pendingChoice.options.map((option, index) => (
@@ -460,9 +464,9 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
         </TouchableOpacity>
       ))}
     </View>
-  );
+  ) : null, [phase, pendingChoice, handleChoiceSelect, sz]);
 
-  const ctrlNode = (
+  const ctrlNode = useMemo(() => (
     <View style={[styles.ctrlRow, { paddingHorizontal: sz(32), paddingTop: sz(24), gap: sz(8) }]}>
       <TouchableOpacity
         onPress={undo}
@@ -475,7 +479,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
         <Text style={[styles.ctrlText, { fontSize: sz(13) }]}>Reset</Text>
       </TouchableOpacity>
     </View>
-  );
+  ), [history, phase, undo, reset, sz]);
 
   const gridNode = (
     <Grid

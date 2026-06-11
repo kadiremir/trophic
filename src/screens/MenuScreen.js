@@ -76,7 +76,7 @@ export default function MenuScreen({ unlocked, completed, onSelect, active = tru
     });
   };
 
-  const tierList = TIER_META.map((tier, ti) => {
+  const tierList = React.useMemo(() => TIER_META.map((tier, ti) => {
     const isExpanded = expandedTiers.has(ti);
     const allLocked = tier.levels.every((li) => li >= unlocked);
     const completedCount = tier.levels.filter((li) => completed.has(li)).length;
@@ -103,7 +103,7 @@ export default function MenuScreen({ unlocked, completed, onSelect, active = tru
         />
       </View>
     );
-  });
+  }), [expandedTiers, unlocked, completed, nextLevel, onSelect, scale, sz]);
 
   if (isWide) {
     return (
@@ -206,7 +206,7 @@ export default function MenuScreen({ unlocked, completed, onSelect, active = tru
 }
 
 // ── ProgressSummary ──────────────────────────────────────────────────────────
-function ProgressSummary({ tiers, levels, unlocked, completed, scale = 1 }) {
+const ProgressSummary = React.memo(function ProgressSummary({ tiers, levels, unlocked, completed, scale = 1 }) {
   const sz = (n) => Math.round(n * scale);
   const totalCompleted = completed.size;
   const totalLevels = levels.length;
@@ -292,7 +292,7 @@ function ProgressSummary({ tiers, levels, unlocked, completed, scale = 1 }) {
       </View>
     </View>
   );
-}
+});
 
 const psStyles = StyleSheet.create({
   card: {
@@ -652,7 +652,7 @@ function HowToPlayModal({ visible, onClose }) {
     }
   }, [visible]);
 
-  const steps = [
+  const steps = React.useMemo(() => [
     {
       title: 'The Food Chain',
       body: 'Each predator can eat only the tier directly below it. Score comes from prey that gets eaten during the chain.',
@@ -726,7 +726,8 @@ function HowToPlayModal({ visible, onClose }) {
         'Your choice determines what resolves first',
       ],
     },
-  ];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], []);
 
   const current = steps[step];
 

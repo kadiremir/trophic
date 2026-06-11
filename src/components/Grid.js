@@ -170,6 +170,11 @@ const Grid = React.memo(function Grid({
     };
   }, []);
 
+  // Keep a ref to the latest drag callbacks so PanResponder/pointer handlers
+  // never need to be recreated when the callbacks change — only when dragEnabled changes.
+  const dragCbRef = useRef(null);
+  dragCbRef.current = { startDragAtPoint, moveDragToPoint, endDragAtPoint, finishDrag, onDragEnd, getBoardPointFromPointer };
+
   const panResponder = useMemo(
     () =>
       PanResponder.create({
@@ -180,41 +185,40 @@ const Grid = React.memo(function Grid({
         onPanResponderTerminationRequest: () => false,
         onShouldBlockNativeResponder: () => true,
         onPanResponderGrant: (evt) => {
-          if (!dragEnabled) return;
           const { locationX, locationY } = evt.nativeEvent;
-          startDragAtPoint(locationX, locationY);
+          dragCbRef.current.startDragAtPoint(locationX, locationY);
         },
         onPanResponderMove: (_, gestureState) => {
           const x = dragStartPoint.current.x + gestureState.dx;
           const y = dragStartPoint.current.y + gestureState.dy;
-          moveDragToPoint(x, y);
+          dragCbRef.current.moveDragToPoint(x, y);
         },
         onPanResponderRelease: (_, gestureState) => {
           if (!dragStartPoint.current) {
-            finishDrag();
+            dragCbRef.current.finishDrag();
             return;
           }
           const x = dragStartPoint.current.x + gestureState.dx;
           const y = dragStartPoint.current.y + gestureState.dy;
-          endDragAtPoint(x, y);
+          dragCbRef.current.endDragAtPoint(x, y);
         },
         onPanResponderTerminate: () => {
-          if (dragging.current && onDragEnd) onDragEnd(null, null);
-          finishDrag();
+          if (dragging.current && dragCbRef.current.onDragEnd) dragCbRef.current.onDragEnd(null, null);
+          dragCbRef.current.finishDrag();
         },
       }),
-    [dragEnabled, endDragAtPoint, finishDrag, moveDragToPoint, onDragEnd, startDragAtPoint]
+    [dragEnabled]
   );
 
   const webPointerHandlers = useMemo(() => Platform.OS !== 'web' || !dragEnabled ? null : ({
         onPointerDown: (event) => {
           const nativeEvent = event.nativeEvent;
-          const point = getBoardPointFromPointer(nativeEvent);
+          const point = dragCbRef.current.getBoardPointFromPointer(nativeEvent);
           if (!point) return;
 
           nativeEvent.preventDefault?.();
           nativeEvent.stopPropagation?.();
-          if (!startDragAtPoint(point.x, point.y)) return;
+          if (!dragCbRef.current.startDragAtPoint(point.x, point.y)) return;
 
           activePointerId.current = nativeEvent.pointerId;
           nativeEvent.target?.setPointerCapture?.(nativeEvent.pointerId);
@@ -222,33 +226,33 @@ const Grid = React.memo(function Grid({
         onPointerMove: (event) => {
           const nativeEvent = event.nativeEvent;
           if (!dragging.current || nativeEvent.pointerId !== activePointerId.current) return;
-          const point = getBoardPointFromPointer(nativeEvent);
+          const point = dragCbRef.current.getBoardPointFromPointer(nativeEvent);
           if (!point) return;
 
           nativeEvent.preventDefault?.();
-          moveDragToPoint(point.x, point.y);
+          dragCbRef.current.moveDragToPoint(point.x, point.y);
         },
         onPointerUp: (event) => {
           const nativeEvent = event.nativeEvent;
           if (nativeEvent.pointerId !== activePointerId.current) return;
-          const point = getBoardPointFromPointer(nativeEvent);
+          const point = dragCbRef.current.getBoardPointFromPointer(nativeEvent);
 
           nativeEvent.preventDefault?.();
           nativeEvent.target?.releasePointerCapture?.(nativeEvent.pointerId);
           if (point) {
-            endDragAtPoint(point.x, point.y);
+            dragCbRef.current.endDragAtPoint(point.x, point.y);
           } else {
-            finishDrag();
+            dragCbRef.current.finishDrag();
           }
         },
         onPointerCancel: (event) => {
           const nativeEvent = event.nativeEvent;
           if (nativeEvent.pointerId !== activePointerId.current) return;
           nativeEvent.target?.releasePointerCapture?.(nativeEvent.pointerId);
-          if (dragging.current && onDragEnd) onDragEnd(null, null);
-          finishDrag();
+          if (dragging.current && dragCbRef.current.onDragEnd) dragCbRef.current.onDragEnd(null, null);
+          dragCbRef.current.finishDrag();
         },
-  }), [dragEnabled, endDragAtPoint, finishDrag, getBoardPointFromPointer, moveDragToPoint, onDragEnd, startDragAtPoint]);
+  }), [dragEnabled]);
 
   const dragGlowScale = dragPulse.interpolate({
     inputRange: [0, 1],

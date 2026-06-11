@@ -47,48 +47,11 @@ function Cell({
   const lifted = isSelected || isChoicePred || isHovered || isCrunch || isChoiceTarget;
   const restAngle = (row + col) % 2 === 0 ? -4 : 4;
 
-  const getFill = () => {
-    if (isDanger) return '#ff6b6b';
-    if (isChoiceTarget) return PAPER.gold;
-    if (isEmpty) return isTarget ? 'rgba(212,175,55,0.18)' : 'transparent';
-    return sk.fill;
-  };
-
-  const getBorder = () => {
-    if (isDanger) return { borderColor: '#fff', borderWidth: 4, borderStyle: 'solid' };
-    if (isChoiceTarget) return { borderColor: '#fff', borderWidth: 4, borderStyle: 'solid' };
-    if (isSelected || isChoicePred || isHovered) return { borderColor: PAPER.gold, borderWidth: 4, borderStyle: 'solid' };
-    if (isHuntTarget) return { borderColor: '#ff5d7a', borderWidth: 4, borderStyle: 'dashed' };
-    if (isEmpty) {
-      return isTarget
-        ? { borderColor: '#d4af37', borderWidth: 3, borderStyle: 'dashed' }
-        : { borderColor: '#5a4a2a', borderWidth: 2, borderStyle: 'dashed' };
-    }
-    return { borderColor: '#fff', borderWidth: 4, borderStyle: 'solid' };
-  };
-
-  const getShadow = () => {
-    if (isEmpty && !isTarget) return {};
-    if (isCrunch) {
-      return { shadowColor: crunchColor || '#000', shadowOpacity: 0.5, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 12 };
-    }
-    if (lifted || isHuntTarget) {
-      return { shadowColor: '#000', shadowOpacity: 0.28, shadowRadius: 9, shadowOffset: { width: 0, height: 6 }, elevation: 8 };
-    }
-    return { shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 5, shadowOffset: { width: 0, height: 3 }, elevation: 4 };
-  };
-
-  const getEmojiScale = () => {
-    if (isCrunch) return 1.35;
-    if (isSelected || isHovered) return 1.08;
-    if (isDanger) return 0.85;
-    if (isChoiceTarget) return 1.1;
-    return 1;
-  };
-
   const tileScale = lifted ? 1.07 : 1;
   const tileAngle = lifted || (isEmpty && !isTarget) ? 0 : restAngle;
   const blinkStyle = isChoicePred ? { opacity: blinkAnim } : null;
+
+  const emojiScale = isCrunch ? 1.35 : (isSelected || isHovered) ? 1.08 : isDanger ? 0.85 : isChoiceTarget ? 1.1 : 1;
 
   const content = (
     <>
@@ -104,7 +67,7 @@ function Cell({
         <PieceIcon
           token={cell}
           size={size * 0.86 * (cell === 'R' || cell === 'F' ? 1.5 : cell === 'G' ? 0.9 : 1)}
-          style={{ transform: [{ scale: getEmojiScale() }] }}
+          style={{ transform: [{ scale: emojiScale }] }}
         />
       )}
 
@@ -127,12 +90,28 @@ function Cell({
     {
       width: size,
       height: size,
-      backgroundColor: getFill(),
+      backgroundColor: isDanger ? '#ff6b6b'
+        : isChoiceTarget ? PAPER.gold
+        : isEmpty ? (isTarget ? 'rgba(212,175,55,0.18)' : 'transparent')
+        : sk.fill,
       transform: [{ rotate: `${tileAngle}deg` }, { scale: tileScale }],
     },
     isGhosted && styles.ghostedCell,
-    getBorder(),
-    getShadow(),
+    isDanger || isChoiceTarget
+      ? { borderColor: '#fff', borderWidth: 4, borderStyle: 'solid' }
+      : (isSelected || isChoicePred || isHovered)
+        ? { borderColor: PAPER.gold, borderWidth: 4, borderStyle: 'solid' }
+        : isHuntTarget
+          ? { borderColor: '#ff5d7a', borderWidth: 4, borderStyle: 'dashed' }
+          : isEmpty
+            ? (isTarget ? { borderColor: '#d4af37', borderWidth: 3, borderStyle: 'dashed' } : { borderColor: '#5a4a2a', borderWidth: 2, borderStyle: 'dashed' })
+            : { borderColor: '#fff', borderWidth: 4, borderStyle: 'solid' },
+    isEmpty && !isTarget ? {}
+      : isCrunch
+        ? { shadowColor: crunchColor || '#000', shadowOpacity: 0.5, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 12 }
+        : lifted || isHuntTarget
+          ? { shadowColor: '#000', shadowOpacity: 0.28, shadowRadius: 9, shadowOffset: { width: 0, height: 6 }, elevation: 8 }
+          : { shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 5, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
   ];
 
   if (!onCellPress) {
