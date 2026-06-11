@@ -37,7 +37,6 @@ When engine.js rules change, re-derive min_moves and re-run scoring for all leve
 
 from __future__ import annotations
 import math
-import sys
 from collections import deque
 from itertools import combinations
 from typing import Optional
@@ -48,9 +47,11 @@ from engine import (
     get_legal_targets, execute_move, get_forced_choice,
     _resolve_choice_branches, can_reach_objective,
 )
-from level_config import (
-    MAX_SOLUTIONS, MAX_SEARCH_STATES, MAX_SLACK, MAX_MIN_MOVES,
-)
+
+MAX_SOLUTIONS     = 50           # cap for solution-count normalisation
+MAX_SEARCH_STATES = 1_000_000    # raised to support dino 2-chain layouts (12 pieces)
+MAX_SLACK         = 5            # normaliser for abs_slack term (matches _tune_budget cap)
+MAX_MIN_MOVES     = 6            # normaliser for planning-depth bonus
 
 
 # ── Board geometry ─────────────────────────────────────────────────────────────
@@ -80,48 +81,33 @@ def measure_board_spread(grid: Grid) -> float:
 def measure_min_moves(grid: Grid, objective: dict) -> Optional[dict]:
     """
     BFS over grid states to find the minimum number of player moves needed
-    to satisfy *objective*, plus cascade statistics aggregated over ALL
-    optimal paths (not just the first found).
+    to satisfy *objective*, plus cascade statistics for the first optimal path found.
 
     Returns a dict with:
       min_moves         — int
-      max_cascade_depth — int, worst single-move cascade across all optimal paths
-      total_auto_events — int, fewest auto-eats on any optimal path (best-case agency)
-      nodes_expanded    — int, BFS nodes processed (useful for diagnostics)
-    or None if unsolvable / MAX_SEARCH_STATES exceeded without finding any solution.
+      max_cascade_depth — int, worst single-move cascade on this optimal path
+      total_auto_events — int, total auto-eats across all moves on this path
+    or None if unsolvable / MAX_SEARCH_STATES exceeded.
 
-    When the search limit is hit before any solution is found, a warning is
-    printed — the board may be solvable but was too expensive to verify.
+    Replaces the former find_min_moves + find_min_moves_with_metrics pair.
     Callers that only need the move count should use find_min_moves().
-    Callers that also need cascade metrics should call this directly and pass
-    the result as min_move_metrics= to score_difficulty() to avoid a second BFS.
+    Callers that also need cascade metrics (e.g. score_difficulty) should call
+    this directly and pass the result as min_move_metrics to avoid a second BFS.
     """
+    # Current score is fully determined by the remaining board contents, so the
+    # grid alone is a sufficient visited key. Including score multiplies the
+    # search space with no extra information.
     start_key = serialize_grid(grid)
     queue: deque = deque()
     queue.append((grid, 0, 0, 0, 0))   # grid, score, moves, max_casc, total_auto
     visited: set[str] = {start_key}
     expanded = 0
-    found_depth: Optional[int] = None
-    winning_stats: list[tuple[int, int]] = []  # (max_casc, total_auto) per optimal path
 
     while queue:
         if expanded >= MAX_SEARCH_STATES:
-            if found_depth is None:
-                print(
-                    f'  [warn] measure_min_moves: BFS exhausted at {MAX_SEARCH_STATES} states '
-                    f'without a solution — board may be solvable but too expensive to verify.',
-                    file=sys.stderr,
-                )
-            break
-
+            return None
         g, score, moves, max_casc, total_auto = queue.popleft()
         expanded += 1
-
-        # Once min_moves is known, skip any states at or beyond that depth.
-        # States at depth (found_depth - 1) are still processed so their
-        # winning successors at exactly found_depth are collected.
-        if found_depth is not None and moves >= found_depth:
-            continue
 
         for r in range(GRID_SIZE):
             for c in range(GRID_SIZE):
@@ -144,15 +130,11 @@ def measure_min_moves(grid: Grid, objective: dict) -> Optional[dict]:
                         new_moves      = moves + 1
 
                         if objective['type'] == 'score' and new_score >= objective['target']:
-                            if found_depth is None:
-                                found_depth = new_moves
-                            if new_moves == found_depth:
-                                winning_stats.append((new_max_casc, new_total_auto))
-                            continue  # don't enqueue winning states
-
-                        if found_depth is not None:
-                            continue  # don't explore beyond min_moves depth
-
+                            return {
+                                'min_moves':         new_moves,
+                                'max_cascade_depth': new_max_casc,
+                                'total_auto_events': new_total_auto,
+                            }
                         if objective['type'] == 'score':
                             if new_score + get_remaining_score_potential(branch['grid']) < objective['target']:
                                 continue
@@ -162,15 +144,7 @@ def measure_min_moves(grid: Grid, objective: dict) -> Optional[dict]:
                             visited.add(key)
                             queue.append((branch['grid'], new_score, new_moves, new_max_casc, new_total_auto))
 
-    if found_depth is None or not winning_stats:
-        return None
-
-    return {
-        'min_moves':         found_depth,
-        'max_cascade_depth': max(s[0] for s in winning_stats),
-        'total_auto_events': min(s[1] for s in winning_stats),
-        'nodes_expanded':    expanded,
-    }
+    return None
 
 
 def find_min_moves(grid: Grid, objective: dict) -> Optional[int]:
@@ -189,11 +163,7 @@ def find_min_moves(grid: Grid, objective: dict) -> Optional[int]:
 def count_winning_first_moves(grid: Grid, objective: dict, min_moves: int) -> int:
     """
     Count distinct (sr, sc, tr, tc) first-move choices that lead to a solution
-    in at most *min_moves* total moves.
-
-    "At most" is intentional: by definition no path can be shorter than min_moves,
-    so the check `rem_min <= min_moves - 1` is equivalent to `rem_min == min_moves - 1`
-    in practice — but the looser form is kept for defensive correctness.
+    in exactly *min_moves* total moves.
 
     For each first move we check whether any of its cascade branches leaves a
     grid that is solvable in min_moves-1 remaining moves.  This requires one
@@ -241,97 +211,57 @@ def count_solutions(
 ) -> tuple[int, int]:
     """
     Counts distinct winning paths (capped at *cap*) and the number of
-    forced-choice points along the first winning path.
+    forced-choice points along the lexicographically first winning path.
 
-    Uses memoised path counting keyed on (grid_state, moves_left).  Score is
-    omitted from the key because it is fully determined by the current grid
-    relative to the initial grid — same state always means the same pieces were
-    eaten and therefore the same score.  Each sub-problem is solved exactly once
-    and the cap is applied incrementally so recursion terminates early.
+    Uses memoisation keyed on (grid_state, score, moves_left) to avoid
+    re-exploring equivalent states.  Returns (solution_count, ambiguity_count).
 
-    Returns (solution_count, ambiguity_count).
+    Note: solution_count is a lower bound — the node cap (30 000) may cause
+    undercounting for complex boards, which slightly inflates measured difficulty.
     """
-    # ── Part 1: memoised path count ────────────────────────────────────────────
-    path_memo: dict[tuple[str, int], int] = {}
+    solutions = [0]
+    first_path_ambiguities = [None]  # set once when the first solution is found
+    nodes = [0]
+    MAX_NODES = 30_000
 
-    def _count(g: Grid, score: int, moves_left: int) -> int:
+    def dfs(g: Grid, score: int, moves_left: int, choice_points: int) -> None:
+        if solutions[0] >= cap or nodes[0] >= MAX_NODES:
+            return
+        nodes[0] += 1
         if objective['type'] == 'score' and score >= objective['target']:
-            return 1
+            solutions[0] += 1
+            if first_path_ambiguities[0] is None:
+                first_path_ambiguities[0] = choice_points
+            return
         if moves_left <= 0:
-            return 0
+            return
         if objective['type'] == 'score':
             if score + get_remaining_score_potential(g) < objective['target']:
-                return 0
-        key = (serialize_grid(g), moves_left)
-        if key in path_memo:
-            return path_memo[key]
-        total = 0
+                return
+
         for r in range(GRID_SIZE):
             for c in range(GRID_SIZE):
                 piece = g[r][c]
                 if not piece or piece == GRASS:
                     continue
                 for tr, tc in get_legal_targets(g, r, c):
-                    res = execute_move(g, r, c, tr, tc)
-                    if not res:
-                        continue
-                    for branch in _resolve_choice_branches(res['grid']):
-                        total += _count(
-                            branch['grid'],
-                            score + res['pts'] + branch['pts'],
-                            moves_left - 1,
-                        )
-                        if total >= cap:
-                            path_memo[key] = cap
-                            return cap
-        path_memo[key] = total
-        return total
-
-    sol_count = _count(grid, 0, budget)
-
-    # ── Part 2: first winning path → ambiguity count ───────────────────────────
-    # Reuses path_memo to prune dead-end branches: any (grid_key, moves_left)
-    # stored as 0 has no winning continuations.
-    first_ambig: list[Optional[int]] = [None]
-
-    def _find_ambig(g: Grid, score: int, moves_left: int, choice_pts: int) -> bool:
-        if first_ambig[0] is not None:
-            return True
-        if objective['type'] == 'score' and score >= objective['target']:
-            first_ambig[0] = choice_pts
-            return True
-        if moves_left <= 0:
-            return False
-        if objective['type'] == 'score':
-            if score + get_remaining_score_potential(g) < objective['target']:
-                return False
-        if path_memo.get((serialize_grid(g), moves_left), -1) == 0:
-            return False
-        for r in range(GRID_SIZE):
-            for c in range(GRID_SIZE):
-                piece = g[r][c]
-                if not piece or piece == GRASS:
-                    continue
-                for tr, tc in get_legal_targets(g, r, c):
+                    if nodes[0] >= MAX_NODES:
+                        return
                     res = execute_move(g, r, c, tr, tc)
                     if not res:
                         continue
                     branches = _resolve_choice_branches(res['grid'])
-                    extra = 1 if len(branches) > 1 else 0
+                    extra_choice = 1 if len(branches) > 1 else 0
                     for branch in branches:
-                        if _find_ambig(
+                        dfs(
                             branch['grid'],
                             score + res['pts'] + branch['pts'],
                             moves_left - 1,
-                            choice_pts + extra,
-                        ):
-                            return True
-        return False
+                            choice_points + extra_choice,
+                        )
 
-    if sol_count > 0:
-        _find_ambig(grid, 0, budget, 0)
-
-    return sol_count, (first_ambig[0] or 0)
+    dfs(grid, 0, budget, 0)
+    return solutions[0], (first_path_ambiguities[0] or 0)
 
 
 # ── Master scoring function ────────────────────────────────────────────────────
@@ -426,7 +356,6 @@ def score_difficulty(
             else count_winning_first_moves(grid, objective, min_moves_val)
         )
 
-    assert budget > 0, f'score_difficulty: budget must be positive, got {budget}'
     abs_slack   = budget - min_moves_val
     slack_ratio = abs_slack / budget
 
