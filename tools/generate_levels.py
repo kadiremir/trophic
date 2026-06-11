@@ -55,109 +55,20 @@ from difficulty import (
     find_min_moves,
     measure_min_moves,
 )
+from level_config import (
+    TIER_CHAIN, LEVELS_PER_TIER, TIER_META,
+    TIER_DIFFICULTY_TARGETS, DIFFICULTY_TARGETS, TIER_DIFFICULTY_BANDS, TOTAL_LEVELS,
+    MIN_SCORE_BY_TIER, QUALITY_THRESHOLDS, LEVEL_NAMES, HINTS,
+)
 
 # ── Output path ────────────────────────────────────────────────────────────────
 
 _TOOLS_DIR   = os.path.dirname(os.path.abspath(__file__))
 _OUTPUT_PATH = os.path.join(_TOOLS_DIR, '..', 'src', 'game', 'levels.json')
 
-# ── Tier definitions ───────────────────────────────────────────────────────────
-
-TIER_CHAIN = [
-    [GRASS, RABBIT, FOX],
-    [GRASS, RABBIT, FOX, WOLF],
-    [GRASS, RABBIT, FOX, WOLF, BEAR],
-    [GRASS, RABBIT, FOX, WOLF, BEAR, DINO],
-]
-
-LEVELS_PER_TIER = 5
-
-TIER_META = [
-    {'label': 'Fox Forest',    'color': '#ff9824', 'chain': 'G->R->F',             'levels': list(range(0 * LEVELS_PER_TIER, 1 * LEVELS_PER_TIER))},
-    {'label': 'Wolf Ridge',    'color': '#8496f0', 'chain': 'G->R->F->W',          'levels': list(range(1 * LEVELS_PER_TIER, 2 * LEVELS_PER_TIER))},
-    {'label': 'Bear Mountain', 'color': '#cd8038', 'chain': 'G->R->F->W->B',       'levels': list(range(2 * LEVELS_PER_TIER, 3 * LEVELS_PER_TIER))},
-    {'label': 'Dino Peak',     'color': '#6ed3c8', 'chain': 'G->R->F->W->B->D',    'levels': list(range(3 * LEVELS_PER_TIER, 4 * LEVELS_PER_TIER))},
-]
-
-# ── Difficulty targets (explicit 40 → 90 tier bands across 20 levels) ────────
-
-TIER_DIFFICULTY_TARGETS = [
-    [40, 45, 50, 55, 60],    # Fox Forest:    40-60
-    [60, 63, 65, 68, 70],    # Wolf Ridge:    60-70
-    [70, 73, 75, 78, 80],    # Bear Mountain: 70-80
-    [80, 83, 85, 88, 90],    # Dino Peak:     80-90
-]
-DIFFICULTY_TARGETS = [target for tier_targets in TIER_DIFFICULTY_TARGETS for target in tier_targets]
-TIER_DIFFICULTY_BANDS = [(tier_targets[0], tier_targets[-1]) for tier_targets in TIER_DIFFICULTY_TARGETS]
-TOTAL_LEVELS = len(DIFFICULTY_TARGETS)
-
-# ── Minimum score targets per tier ────────────────────────────────────────────
-# A score target below these values is trivially meaningless:
-#   Tier 0 (Fox Forest)    G=1 + R=3          → at least one full fox chain = 4
-#   Tier 1 (Wolf Ridge)    + F=8               → at least one wolf chain = 12
-#   Tier 2 (Bear Mountain) + W=20              → at least one bear chain = 32
-#   Tier 3 (Dino Peak)     + B=48              → at least half a dino chain = 40
-MIN_SCORE_BY_TIER = [4, 12, 32, 40]
-
-# ── Quality thresholds per tier ────────────────────────────────────────────────
-# Each entry: (max_cascade_depth, min_agency_ratio, min_board_spread, min_branching)
-#
-# max_cascade_depth:    most auto-eats allowed after any single player move.
-#                       Tier 3 (dino) is uncapped — the long chain cascade is intentional.
-# min_agency_ratio:     player moves / (player + auto) events. 1.0 = fully manual.
-#                       Higher tier = more cascade is acceptable.
-# min_board_spread:     mean Chebyshev distance between pieces. Too low = clustered board
-#                       where chains fire immediately once touched.
-# min_first_move_branching: how many distinct opening moves lead to a solution.
-#                       1 = only one valid opener (too obvious); require ≥2 for mid+ tiers.
-
-_QUALITY_THRESHOLDS = {
-    # tier: (max_cascade, min_agency, min_spread, min_branching)
-    0: (3,    0.30, 1.8, 1),   # Fox Forest
-    1: (4,    0.25, 2.0, 2),   # Wolf Ridge
-    2: (5,    0.20, 2.0, 2),   # Bear Mountain
-    3: (999,  0.10, 1.5, 1),   # Dino Peak — long cascade is the intended spectacle
-}
-
-# ── Level names and hints ──────────────────────────────────────────────────────
-
-LEVEL_NAMES = [
-    # Fox Forest (1-5)
-    'First Hunt',     'Fox Trail',     'Two Lanes',     'Corner Push',    'Split Meadow',
-    # Wolf Ridge (6-10)
-    'Wolf Run',       'Ridge Walk',    'Crossing',      'Pressure Zone',  'Dense Forest',
-    # Bear Mountain (11-15)
-    'Bear Awakens',   'Mountain Pass', 'High Ridge',    'Four Points',    'Bear Crossing',
-    # Dino Peak (16-20)
-    'Apex Hunt',      'Dino Valley',   'Cliff Edge',    'Summit Climb',   'Final Summit',
-]
-
-HINTS = [
-    # Fox Forest
-    'Move the fox adjacent to the rabbit to start your first chain.',
-    'One chain, one path. Set up before you trigger.',
-    'Two lanes, two chains. Trigger them in order.',
-    'Corner chains resolve cleanly. Pick your starting corner.',
-    'Split the board — handle each side independently.',
-    # Wolf Ridge
-    'The wolf needs the full chain set up before it can eat.',
-    'Position the wolf last — it eats the whole lane at once.',
-    'One misplaced move stalls the whole board.',
-    'Two forced-choice moments. Choose the branch that scores most.',
-    'Pack the score early — you will need every point.',
-    # Bear Mountain
-    'The bear carries heavy points. Stage the full chain before feeding it.',
-    'Bear + fox together. Bear lane first, fox for cleanup.',
-    'The bear lane is the anchor. Do not fire it early.',
-    'Four corners, four chains. Sequence matters.',
-    'One bear and three fox. Order the fox around the bear.',
-    # Dino Peak
-    'Dino fires for 48+20+8+3+1. One setup move ignites everything.',
-    'Same chain, fresh shape. Feed the bottom, harvest the top.',
-    'Every cell has a role. No wasted moves here.',
-    'Two dino lanes. Fire the smaller one first to keep space.',
-    'Final board. No free cascades — earn every point.',
-]
+# _QUALITY_THRESHOLDS is imported as QUALITY_THRESHOLDS from level_config;
+# keep the underscore-prefixed alias so internal callers are unchanged.
+_QUALITY_THRESHOLDS = QUALITY_THRESHOLDS
 
 # ── Grid helpers ───────────────────────────────────────────────────────────────
 
@@ -262,8 +173,10 @@ def _piece_counts_for_tier(tier: int, difficulty: int, rng: random.Random) -> di
         # 2 full chains, so don't waste half the attempts on 1-chain boards.
         n_chains = 2 if difficulty >= 85 else rng.choice([1, 2])
     else:
-        # Official level targets now start at 40, so Fox Forest can open with
-        # multi-chain boards instead of the old 20-39 single-chain ramp.
+        # All tier 0-2 targets are >= 40, so `difficulty >= 40` is always True
+        # here, making n_chains = 2 for every Fox Forest level (intentional —
+        # 2-chain boards are needed to reach the 40+ difficulty band reliably).
+        # If you ever add sub-40 targets, this will naturally produce 1-chain boards.
         n_chains = 1 + (difficulty >= 40)
         n_chains = rng.randint(n_chains, min(n_chains + 1, 2))
 
@@ -329,8 +242,6 @@ def _tune_budget(
         if delta < best_delta:
             best_delta = delta
         candidates.append((budget, info, delta))
-        if info['difficulty'] < target_difficulty and extra >= 2:
-            break
 
     # Enforce slack cap: drop any candidate whose budget is too generous
     candidates = [(b, i, d) for b, i, d in candidates if b - min_moves <= MAX_SLACK]
@@ -423,6 +334,7 @@ def _build_level(
     budget: int,
     score_target: int,
     info: dict,
+    nodes_expanded: int = 0,
 ) -> dict:
     pieces = [
         [grid[r][c], r, c]
@@ -454,21 +366,38 @@ def _build_level(
             'agency_ratio':                info['agency_ratio'],
             'first_move_branching_factor': info['first_move_branching_factor'],
             'mean_pairwise_distance':      info['mean_pairwise_distance'],
+            'nodes_expanded':              nodes_expanded,
         },
     }
+
+
+def _layout_hash(grid: list, score_target: int) -> str:
+    """Stable content hash for deduplication across generated levels."""
+    pieces = tuple(sorted(
+        (grid[r][c], r, c)
+        for r in range(GRID_SIZE)
+        for c in range(GRID_SIZE)
+        if grid[r][c]
+    ))
+    return f'{pieces}|{score_target}'
 
 
 def _assign_level_slot(level: dict, level_index: int) -> dict:
     """
     Rewrite slot-dependent metadata after final difficulty ordering.
 
-    The level geometry, move budget, objective, and measured difficulty stay
-    untouched; only campaign-facing labels and target metadata are reseated to
-    match the final slot order.
+    The level geometry, move budget, objective, measured difficulty, and hint
+    stay untouched; only the id, name, and target_difficulty are reseated to
+    match the final sorted position.
+
+    Hints are intentionally NOT reassigned here.  The hint assigned during
+    generation was written for the board that actually exists; overwriting it
+    with a positional hint string after sorting would produce hints that
+    describe the wrong board.  After regenerating, review hints manually if
+    the board order changed significantly.
     """
     level['id'] = level_index + 1
     level['name'] = LEVEL_NAMES[level_index]
-    level['hint'] = HINTS[level_index]
     level['meta']['target_difficulty'] = DIFFICULTY_TARGETS[level_index]
     return level
 
@@ -516,12 +445,14 @@ _R_FLOOR      = 'floor'
 _R_BAND       = 'band'
 _R_DIFF       = 'diff'
 _R_QUALITY    = 'qual'
+_R_DUPE       = 'dupe'
 
 
 def generate_level(
     level_index: int,
     rng: random.Random,
     max_outer_tries: int = 200,
+    seen_hashes: Optional[set] = None,
 ) -> Optional[dict]:
     """
     Generate a single level at *level_index* within the configured target list.
@@ -537,7 +468,7 @@ def generate_level(
     floor       = _min_moves_floor(target_diff)
 
     rejects = {_R_PLACEMENT: 0, _R_SCORE: 0, _R_UNSOLVABLE: 0,
-               _R_FLOOR: 0, _R_BAND: 0, _R_DIFF: 0, _R_QUALITY: 0}
+               _R_FLOOR: 0, _R_BAND: 0, _R_DIFF: 0, _R_QUALITY: 0, _R_DUPE: 0}
 
     best_candidate: Optional[dict] = None
     best_delta = float('inf')
@@ -592,11 +523,13 @@ def generate_level(
             rejects[_R_BAND] += 1
             continue
 
+        nodes = base_metrics.get('nodes_expanded', 0)
+
         # Keep the closest band-valid candidate as the fallback. This preserves
         # the hard difficulty split even when the full quality gate cannot be met.
         if delta < best_delta:
             best_delta     = delta
-            best_candidate = _build_level(level_index, tier, grid, budget, score_target, info)
+            best_candidate = _build_level(level_index, tier, grid, budget, score_target, info, nodes)
 
         if delta > diff_tolerance:
             rejects[_R_DIFF] += 1
@@ -606,7 +539,13 @@ def generate_level(
             rejects[_R_QUALITY] += 1
             continue
 
-        return _build_level(level_index, tier, grid, budget, score_target, info)
+        if seen_hashes is not None:
+            h = _layout_hash(grid, score_target)
+            if h in seen_hashes:
+                rejects[_R_DUPE] += 1
+                continue
+
+        return _build_level(level_index, tier, grid, budget, score_target, info, nodes)
 
     # All attempts exhausted — use best-found fallback if available
     if best_candidate is not None:
@@ -663,8 +602,8 @@ def _build_output(levels: list[dict], seed: int) -> dict:
 
 def _print_table_header(index_label: str) -> None:
     print(f'{index_label:>4}  {"Diff":>6}  {"Target":>6}  {"MinMv":>5}  {"Budget":>6}  '
-          f'{"Sols":>4}  {"Casc":>4}  {"Agcy":>5}  {"Sprd":>5}  {"Brch":>4}')
-    print('-' * 72)
+          f'{"Sols":>4}  {"Casc":>4}  {"Agcy":>5}  {"Sprd":>5}  {"Brch":>4}  {"Nodes":>7}')
+    print('-' * 82)
 
 
 def _print_level_table(levels: list[dict], label: str) -> None:
@@ -678,7 +617,8 @@ def _print_level_table(levels: list[dict], label: str) -> None:
             f'{m["min_moves"]:5d}  {lv["moves"]:6d}  '
             f'{m["solution_count"]:4d}  {m["max_cascade_depth"]:4d}  '
             f'{m["agency_ratio"]:5.2f}  {m["mean_pairwise_distance"]:5.2f}  '
-            f'{m["first_move_branching_factor"]:4d}'
+            f'{m["first_move_branching_factor"]:4d}  '
+            f'{m.get("nodes_expanded", 0):7d}'
         )
 
 
@@ -700,15 +640,16 @@ def main() -> None:
         _run_validation(out_path)
         return
 
-    rng    = random.Random(args.seed)
-    levels = []
+    rng         = random.Random(args.seed)
+    levels      = []
+    seen_hashes: set[str] = set()
 
     print(f'\nGenerating {TOTAL_LEVELS} levels  (seed={args.seed})\n')
     _print_table_header('Slot')
 
     for i in range(TOTAL_LEVELS):
         print(f'{i + 1:4d}  ', end='', flush=True)
-        lv = generate_level(i, rng)
+        lv = generate_level(i, rng, seen_hashes=seen_hashes)
         if lv is None:
             print('FAILED — cannot continue.')
             sys.exit(1)
@@ -718,8 +659,15 @@ def main() -> None:
             f'{m["min_moves"]:5d}  {lv["moves"]:6d}  '
             f'{m["solution_count"]:4d}  {m["max_cascade_depth"]:4d}  '
             f'{m["agency_ratio"]:5.2f}  {m["mean_pairwise_distance"]:5.2f}  '
-            f'{m["first_move_branching_factor"]:4d}'
+            f'{m["first_move_branching_factor"]:4d}  '
+            f'{m.get("nodes_expanded", 0):7d}'
         )
+        # Register layout so subsequent levels can't duplicate it
+        pieces_flat = [(row[0], row[1], row[2]) for row in lv['pieces']]
+        grid_for_hash = [[None] * GRID_SIZE for _ in range(GRID_SIZE)]
+        for tok, r, c in pieces_flat:
+            grid_for_hash[r][c] = tok
+        seen_hashes.add(_layout_hash(grid_for_hash, lv['objective']['target']))
         levels.append(lv)
 
     levels = _order_levels_by_difficulty(levels)

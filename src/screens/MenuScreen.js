@@ -658,153 +658,101 @@ function TrophicHeroBrand({ wide = false, scale = 1 }) {
 
 function HowToPlayModal({ visible, onClose }) {
   const [step, setStep] = React.useState(0);
+  const slideAnim = React.useRef(new Animated.Value(0)).current;
+  const prevStep = React.useRef(0);
 
   React.useEffect(() => {
-    if (!visible) {
-      setStep(0);
-    }
+    if (!visible) setStep(0);
   }, [visible]);
 
-  const steps = React.useMemo(() => [
+  const goToStep = React.useCallback((next) => {
+    const dir = next > prevStep.current ? 1 : -1;
+    prevStep.current = next;
+    slideAnim.setValue(dir * 60);
+    setStep(next);
+    Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 180, friction: 20 }).start();
+  }, [slideAnim]);
+
+  const STEPS = [
     {
       title: 'The Food Chain',
-      body: 'Each predator can eat only the tier directly below it. Score comes from prey that gets eaten during the chain.',
-      visual: (
-        <View style={styles.modalChainRow}>
-          {['G', 'R', 'F', 'W', 'B', 'D'].map((token, index, arr) => (
-            <React.Fragment key={token}>
-              <PieceBadge token={token} />
-              {index < arr.length - 1 && <FlowArrow compact />}
-            </React.Fragment>
-          ))}
-        </View>
-      ),
-      notes: [
-        'Rabbit eats grass',
-        'Fox eats rabbit',
-        'Wolf eats fox',
-        'Bear eats wolf',
-        'Dinosaur eats bear',
-      ],
+      body: 'Every animal eats the tier directly below it. This chain is the foundation of every move you make.',
+      Visual: ChainPyramidVisual,
+      notes: [],
     },
     {
-      title: 'Drag to Move',
-      body: 'Drag an animal one cell in any direction. Drop on the same cell, off the board, or on an illegal cell to cancel.',
-      visual: (
-        <View style={styles.modalDemoRow}>
-          <PieceDemoTile token="F" variant="selected" />
-          <FlowArrow />
-          <PieceDemoTile token="R" variant="target" />
-        </View>
-      ),
-      notes: [
-        'Animals move in 8 directions',
-        'Drag instead of tap-to-move',
-        'Empty cells and prey cells can be valid drops',
-      ],
+      title: 'Moving & Eating',
+      body: 'Move a predator next to its prey — if it has exactly one adjacent prey, it eats automatically. You can also move to empty cells to reposition.',
+      Visual: MoveVisual,
+      notes: ['Move in all 8 directions', 'Land adjacent to prey → auto-eat', 'Drop on same cell to cancel'],
+    },
+    {
+      title: 'Scoring Points',
+      body: 'You earn points for every piece that gets eaten. Higher tiers are worth much more — aim for the top of the chain.',
+      Visual: PointsVisual,
+      notes: [],
     },
     {
       title: 'Chain Reactions',
-      body: 'After your move, guaranteed forced eats resolve automatically. Long cascades build your combo and score.',
-      visual: (
-        <View style={styles.modalDemoRow}>
-          <PieceBadge token="G" />
-          <FlowArrow compact />
-          <PieceBadge token="R" />
-          <FlowArrow compact />
-          <PieceBadge token="F" />
-          <FlowArrow compact />
-          <PieceBadge token="W" />
-        </View>
-      ),
-      notes: [
-        'Lower trophic tiers resolve first',
-        'The board keeps checking for the next forced eat',
-        'Bigger chains mean better combos',
-      ],
+      body: 'After your move, if a predator has exactly one adjacent prey it eats automatically — and this can cascade into a long chain.',
+      Visual: CascadeVisual,
+      notes: ['You only move one piece per turn', 'The board keeps resolving until stable', 'Plan your setup to trigger long cascades'],
     },
     {
       title: 'Forced Choices',
-      body: 'If multiple predators at the same active tier can eat, the prey stays highlighted and the eligible predators blink. Drag one blinking predator onto that prey to decide the order.',
-      visual: (
-        <View style={styles.choicePreview}>
-          <PieceDemoTile token="F" variant="blink" />
-          <PieceDemoTile token="R" variant="prey" />
-          <PieceDemoTile token="F" variant="blink" />
-        </View>
-      ),
-      notes: [
-        'Blinking predators are the valid choosers',
-        'The highlighted prey is the forced target',
-        'Your choice determines what resolves first',
-      ],
+      body: 'If a predator can reach two or more prey after a move, the game pauses and asks you to choose which one it eats.',
+      Visual: ChoiceVisual,
+      notes: ['Blinking piece = waiting for your input', 'Amber highlighted cells = valid targets', 'Your choice shapes the rest of the cascade'],
     },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], []);
+    {
+      title: 'Combos',
+      body: 'Every eat event in a single turn counts toward your combo. A well-set chain can fire 4–5 eats from one move.',
+      Visual: ComboVisual,
+      notes: ['Combo = total eats in one turn', 'Your best combo is shown in the HUD', 'Some levels require a minimum combo to win'],
+    },
+  ];
 
-  const current = steps[step];
+  const current = STEPS[step];
+  const { Visual } = current;
 
   return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      transparent
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
         <Pressable style={styles.modalShell} onPress={() => {}}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{current.title}</Text>
-            <Text style={styles.modalBody}>{current.body}</Text>
+            <Animated.View style={{ flex: 1, transform: [{ translateX: slideAnim }] }}>
+              <Text style={styles.modalTitle}>{current.title}</Text>
+              <Text style={styles.modalBody}>{current.body}</Text>
 
-            <View style={styles.modalVisual}>{current.visual}</View>
+              <View style={styles.modalVisual}>
+                <Visual key={step} />
+              </View>
 
-            <View style={styles.modalNotes}>
-              {current.notes.map((note) => (
-                <Text key={note} style={styles.modalNoteText}>
-                  - {note}
-                </Text>
-              ))}
-            </View>
+              <View style={styles.modalNotes}>
+                {current.notes.map((note) => (
+                  <Text key={note} style={styles.modalNoteText}>· {note}</Text>
+                ))}
+              </View>
+            </Animated.View>
 
             <View style={styles.modalFooter}>
               <TouchableOpacity
-                onPress={() => setStep((prev) => Math.max(0, prev - 1))}
+                onPress={() => goToStep(step - 1)}
                 disabled={step === 0}
-                style={[
-                  styles.modalNavBtn,
-                  styles.modalNavBtnSecondary,
-                  step === 0 && styles.modalNavBtnDisabled,
-                ]}
+                style={[styles.modalNavBtn, styles.modalNavBtnSecondary, step === 0 && styles.modalNavBtnDisabled]}
               >
-                <Text style={[styles.modalNavIcon, step === 0 && styles.modalNavTextDisabled]}>
-                  {'<'}
-                </Text>
-                <Text style={[styles.modalNavText, step === 0 && styles.modalNavTextDisabled]}>
-                  Previous
-                </Text>
+                <Text style={[styles.modalNavIcon, step === 0 && styles.modalNavTextDisabled]}>{'<'}</Text>
+                <Text style={[styles.modalNavText, step === 0 && styles.modalNavTextDisabled]}>Previous</Text>
               </TouchableOpacity>
 
               <View style={styles.modalDots}>
-                {steps.map((item, index) => (
-                  <View
-                    key={item.title}
-                    style={[
-                      styles.modalDot,
-                      index === step && styles.modalDotActive,
-                    ]}
-                  />
+                {STEPS.map((s, index) => (
+                  <View key={s.title} style={[styles.modalDot, index === step && styles.modalDotActive]} />
                 ))}
               </View>
 
-              {step < steps.length - 1 ? (
-                <TouchableOpacity
-                  onPress={() => setStep((prev) => prev + 1)}
-                  style={[
-                    styles.modalNavBtn,
-                    styles.modalNavBtnPrimary,
-                  ]}
-                >
+              {step < STEPS.length - 1 ? (
+                <TouchableOpacity onPress={() => goToStep(step + 1)} style={[styles.modalNavBtn, styles.modalNavBtnPrimary]}>
                   <Text style={styles.modalNavTextPrimary}>Next</Text>
                   <Text style={styles.modalNavIconPrimary}>{'>'}</Text>
                 </TouchableOpacity>
@@ -822,6 +770,400 @@ function HowToPlayModal({ visible, onClose }) {
         </Pressable>
       </Pressable>
     </Modal>
+  );
+}
+
+// ── Slide 1: Food Chain pyramid (stacked rectangles) ─────────────────────────
+const PYRAMID_ROWS = [
+  { token: 'D', emoji: '🦖', width: 60  },
+  { token: 'B', emoji: '🐻', width: 102 },
+  { token: 'W', emoji: '🐺', width: 144 },
+  { token: 'F', emoji: '🦊', width: 186 },
+  { token: 'R', emoji: '🐰', width: 228 },
+  { token: 'G', emoji: '🌱', width: 270 },
+];
+
+function ChainPyramidVisual() {
+  const [shown, setShown] = React.useState([false, false, false, false, false, false]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const ORDER = [5, 4, 3, 2, 1, 0];
+    const BUILD_DELAY = 150;
+    const STEP_MS = 160;
+    const HOLD_MS = 1600;
+    const RESET_MS = 200;
+    const TOTAL_BUILD = BUILD_DELAY + ORDER.length * STEP_MS;
+
+    function runCycle() {
+      if (cancelled) return;
+      ORDER.forEach((tierIdx, order) => {
+        setTimeout(() => {
+          if (cancelled) return;
+          setShown((prev) => { const n = [...prev]; n[tierIdx] = true; return n; });
+        }, BUILD_DELAY + order * STEP_MS);
+      });
+      setTimeout(() => {
+        if (cancelled) return;
+        setShown([false, false, false, false, false, false]);
+        setTimeout(() => { if (!cancelled) runCycle(); }, RESET_MS);
+      }, TOTAL_BUILD + HOLD_MS);
+    }
+
+    runCycle();
+    return () => { cancelled = true; };
+  }, []);
+
+  return (
+    <View style={{ alignItems: 'center', gap: 2 }}>
+      {PYRAMID_ROWS.map((row, i) => (
+        <View
+          key={row.token}
+          style={{
+            width: row.width,
+            height: 36,
+            borderRadius: 4,
+            backgroundColor: PAL[row.token].bg,
+            borderWidth: 1,
+            borderColor: PAL[row.token].border,
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: shown[i] ? 1 : 0,
+            // CSS transition via style on web
+            transition: 'opacity 0.2s ease-out',
+          }}
+        >
+          <Text style={{ fontSize: 20, lineHeight: 24 }}>{row.emoji}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+// ── Slide 2: Move → adjacent → auto-eat animation ───────────────────────────
+// Shows: [Fox] [empty cell] [Rabbit]
+// Fox moves into the empty middle cell → Rabbit auto-eats with AUTO label
+function MoveVisual() {
+  const rabbitX     = React.useRef(new Animated.Value(0)).current;
+  const autoOpacity = React.useRef(new Animated.Value(0)).current;
+  const autoScale   = React.useRef(new Animated.Value(0.6)).current;
+  const grassOp     = React.useRef(new Animated.Value(1)).current;
+  const ptsScale    = React.useRef(new Animated.Value(0)).current;
+
+  const CELL = 66; // cell width + gap
+
+  React.useEffect(() => {
+    const anim = Animated.loop(Animated.sequence([
+      Animated.delay(600),
+      // Rabbit slides left next to Grass
+      Animated.timing(rabbitX, { toValue: -CELL, duration: 400, useNativeDriver: true, easing: Easing.inOut(Easing.quad) }),
+      Animated.delay(200),
+      // AUTO badge pops in
+      Animated.parallel([
+        Animated.timing(autoOpacity, { toValue: 1,   duration: 150, useNativeDriver: true }),
+        Animated.timing(autoScale,   { toValue: 1,   duration: 150, useNativeDriver: true }),
+      ]),
+      Animated.delay(300),
+      // Grass eaten, +1 pops
+      Animated.parallel([
+        Animated.timing(grassOp,  { toValue: 0, duration: 180, useNativeDriver: true }),
+        Animated.timing(ptsScale, { toValue: 1, duration: 150, useNativeDriver: true }),
+      ]),
+      Animated.delay(700),
+      // reset
+      Animated.parallel([
+        Animated.timing(rabbitX,     { toValue: 0,   duration: 0, useNativeDriver: true }),
+        Animated.timing(autoOpacity, { toValue: 0,   duration: 0, useNativeDriver: true }),
+        Animated.timing(autoScale,   { toValue: 0.6, duration: 0, useNativeDriver: true }),
+        Animated.timing(grassOp,     { toValue: 1,   duration: 0, useNativeDriver: true }),
+        Animated.timing(ptsScale,    { toValue: 0,   duration: 0, useNativeDriver: true }),
+      ]),
+    ]));
+    anim.start();
+    return () => anim.stop();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <View style={{ alignItems: 'center', gap: 10 }}>
+      {/* AUTO badge */}
+      <Animated.View style={{ opacity: autoOpacity, transform: [{ scale: autoScale }] }}>
+        <View style={{ backgroundColor: 'rgba(79,208,79,0.18)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 3 }}>
+          <Text style={{ color: '#4fd04f', fontSize: 10, fontWeight: '800', letterSpacing: 1.5 }}>AUTO-EAT</Text>
+        </View>
+      </Animated.View>
+
+      {/* 2-cell row: Grass | Rabbit (Rabbit slides left onto Grass) */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        {/* Grass with +1 label */}
+        <View style={{ position: 'relative' }}>
+          <Animated.View style={{ opacity: grassOp }}>
+            <PieceDemoTile token="G" variant="target" />
+          </Animated.View>
+          <Animated.View style={{ position: 'absolute', top: -16, left: 0, right: 0, alignItems: 'center', transform: [{ scale: ptsScale }] }}>
+            <Text style={{ color: '#4fd04f', fontSize: 13, fontWeight: '900' }}>+1</Text>
+          </Animated.View>
+        </View>
+        {/* Rabbit moves left */}
+        <Animated.View style={{ transform: [{ translateX: rabbitX }] }}>
+          <PieceDemoTile token="R" variant="selected" />
+        </Animated.View>
+      </View>
+    </View>
+  );
+}
+
+// ── Slide 3: Points pop-in ───────────────────────────────────────────────────
+const PREY_POINTS_DISPLAY = [
+  { token: 'G', pts: 1 },
+  { token: 'R', pts: 3 },
+  { token: 'F', pts: 8 },
+  { token: 'W', pts: 20 },
+  { token: 'B', pts: 48 },
+];
+
+function PointsVisual() {
+  const scales = React.useRef(PREY_POINTS_DISPLAY.map(() => new Animated.Value(0))).current;
+
+  React.useEffect(() => {
+    const popIn = Animated.stagger(130,
+      scales.map((s) => Animated.spring(s, { toValue: 1, useNativeDriver: true, tension: 120, friction: 8 }))
+    );
+    const reset = Animated.parallel(scales.map((s) => Animated.timing(s, { toValue: 0, duration: 0, useNativeDriver: true })));
+    const loop = Animated.loop(
+      Animated.sequence([Animated.delay(200), popIn, Animated.delay(1400), reset, Animated.delay(100)])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 10 }}>
+      {PREY_POINTS_DISPLAY.map(({ token, pts }, i) => (
+        <Animated.View key={token} style={{ alignItems: 'center', gap: 5, transform: [{ scale: scales[i] }] }}>
+          <PieceBadge token={token} />
+          <Text style={{ color: PAL[token].glow, fontSize: 11, fontWeight: '800' }}>{pts}pt{pts > 1 ? 's' : ''}</Text>
+        </Animated.View>
+      ))}
+    </View>
+  );
+}
+
+// ── Slide 4: Cascade animation ───────────────────────────────────────────────
+// Layout: [Fox] [Grass] [Rabbit]
+// Step 1: Rabbit jumps left onto Grass (+1 AUTO)
+// Step 2: Fox jumps right onto Rabbit (+3 AUTO)
+const CELL_GAP = 66; // 56px tile + 10px gap
+
+function CascadeVisual() {
+  // Layout: Fox | Grass | Rabbit
+  // Step 1: Rabbit slides LEFT onto Grass (center) → Grass eaten (+1)
+  // Step 2: Fox lights up and slides RIGHT onto Rabbit at center → Rabbit eaten (+3)
+  const rabbitX  = React.useRef(new Animated.Value(0)).current;
+  const foxX     = React.useRef(new Animated.Value(0)).current;
+  const grassOp  = React.useRef(new Animated.Value(1)).current;
+  const pts1Op   = React.useRef(new Animated.Value(0)).current;
+  const auto1Sc  = React.useRef(new Animated.Value(0)).current;
+  const rabbitOp = React.useRef(new Animated.Value(1)).current;
+  const pts2Op   = React.useRef(new Animated.Value(0)).current;
+  const auto2Sc  = React.useRef(new Animated.Value(0)).current;
+  const [foxVariant, setFoxVariant] = React.useState('normal');
+
+  React.useEffect(() => {
+    let cancelled = false;
+    // Cycle timings (ms)
+    const HOLD_START = 700;
+    const RABBIT_SLIDE = 380;
+    const GRASS_FADE = 160;
+    const BETWEEN = 450;
+    const FOX_GLOW = 200;
+    const FOX_SLIDE = 380;
+    const RABBIT_FADE = 160;
+    const HOLD_END = 900;
+    const TOTAL = HOLD_START + RABBIT_SLIDE + GRASS_FADE + BETWEEN + FOX_GLOW + FOX_SLIDE + RABBIT_FADE + HOLD_END;
+
+    function runCycle() {
+      if (cancelled) return;
+      // Reset
+      rabbitX.setValue(0); foxX.setValue(0); grassOp.setValue(1);
+      rabbitOp.setValue(1); pts1Op.setValue(0); pts2Op.setValue(0);
+      auto1Sc.setValue(0); auto2Sc.setValue(0);
+      setFoxVariant('normal');
+
+      const t0 = HOLD_START;
+      // Step 1: Rabbit slides left
+      setTimeout(() => {
+        if (cancelled) return;
+        Animated.timing(rabbitX, { toValue: -CELL_GAP, duration: RABBIT_SLIDE, useNativeDriver: true, easing: Easing.inOut(Easing.quad) }).start();
+      }, t0);
+      // Grass fades
+      const t1 = t0 + RABBIT_SLIDE;
+      setTimeout(() => {
+        if (cancelled) return;
+        Animated.parallel([
+          Animated.timing(grassOp, { toValue: 0, duration: GRASS_FADE, useNativeDriver: true }),
+          Animated.timing(pts1Op,  { toValue: 1, duration: GRASS_FADE, useNativeDriver: true }),
+          Animated.timing(auto1Sc, { toValue: 1, duration: GRASS_FADE, useNativeDriver: true }),
+        ]).start();
+      }, t1);
+      // Clear step-1 badges and start step 2: Fox glows
+      const t2 = t1 + GRASS_FADE + BETWEEN;
+      setTimeout(() => {
+        if (cancelled) return;
+        pts1Op.setValue(0); auto1Sc.setValue(0);
+        setFoxVariant('selected');
+      }, t2);
+      // Fox slides right
+      const t3 = t2 + FOX_GLOW;
+      setTimeout(() => {
+        if (cancelled) return;
+        Animated.timing(foxX, { toValue: CELL_GAP, duration: FOX_SLIDE, useNativeDriver: true, easing: Easing.inOut(Easing.quad) }).start();
+      }, t3);
+      // Rabbit fades
+      const t4 = t3 + FOX_SLIDE;
+      setTimeout(() => {
+        if (cancelled) return;
+        Animated.parallel([
+          Animated.timing(rabbitOp, { toValue: 0, duration: RABBIT_FADE, useNativeDriver: true }),
+          Animated.timing(pts2Op,   { toValue: 1, duration: RABBIT_FADE, useNativeDriver: true }),
+          Animated.timing(auto2Sc,  { toValue: 1, duration: RABBIT_FADE, useNativeDriver: true }),
+        ]).start();
+      }, t4);
+      // Loop
+      setTimeout(() => { if (!cancelled) runCycle(); }, TOTAL);
+    }
+    runCycle();
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <View style={{ alignItems: 'center', gap: 6 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, height: 72 }}>
+
+        {/* Fox: slides right onto center */}
+        <View style={{ position: 'relative', width: 56 }}>
+          <Animated.View style={{ transform: [{ translateX: foxX }] }}>
+            <PieceDemoTile token="F" variant={foxVariant} />
+          </Animated.View>
+          <Animated.View style={{ position: 'absolute', top: -18, left: CELL_GAP, right: -CELL_GAP, alignItems: 'center', opacity: pts2Op }}>
+            <Text style={{ color: '#ff9824', fontSize: 12, fontWeight: '900' }}>+3</Text>
+          </Animated.View>
+          <Animated.View style={{ position: 'absolute', top: -30, left: CELL_GAP - 16, right: -CELL_GAP + 16, alignItems: 'center', transform: [{ scale: auto2Sc }] }}>
+            <View style={{ backgroundColor: 'rgba(79,208,79,0.18)', borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1 }}>
+              <Text style={{ color: '#4fd04f', fontSize: 8, fontWeight: '800', letterSpacing: 1 }}>AUTO</Text>
+            </View>
+          </Animated.View>
+        </View>
+
+        {/* Grass: center, fades when Rabbit eats it */}
+        <View style={{ position: 'relative', width: 56 }}>
+          <Animated.View style={{ opacity: grassOp }}>
+            <PieceDemoTile token="G" variant="normal" />
+          </Animated.View>
+          <Animated.View style={{ position: 'absolute', top: -18, left: 0, right: 0, alignItems: 'center', opacity: pts1Op }}>
+            <Text style={{ color: '#4fd04f', fontSize: 12, fontWeight: '900' }}>+1</Text>
+          </Animated.View>
+          <Animated.View style={{ position: 'absolute', top: -30, left: -16, right: -16, alignItems: 'center', transform: [{ scale: auto1Sc }] }}>
+            <View style={{ backgroundColor: 'rgba(79,208,79,0.18)', borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1 }}>
+              <Text style={{ color: '#4fd04f', fontSize: 8, fontWeight: '800', letterSpacing: 1 }}>AUTO</Text>
+            </View>
+          </Animated.View>
+        </View>
+
+        {/* Rabbit: slides left onto center, fades when Fox eats */}
+        <View style={{ position: 'relative', width: 56 }}>
+          <Animated.View style={{ opacity: rabbitOp, transform: [{ translateX: rabbitX }] }}>
+            <PieceDemoTile token="R" variant="selected" />
+          </Animated.View>
+        </View>
+
+      </View>
+    </View>
+  );
+}
+
+// ── Slide 5: Forced choice blink ─────────────────────────────────────────────
+function ChoiceVisual() {
+  const blink = React.useRef(new Animated.Value(1)).current;
+  const rabbitGlow = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    const anim = Animated.loop(Animated.parallel([
+      Animated.sequence([
+        Animated.timing(blink, { toValue: 0.25, duration: 380, useNativeDriver: true }),
+        Animated.timing(blink, { toValue: 1,    duration: 380, useNativeDriver: true }),
+      ]),
+      Animated.sequence([
+        Animated.timing(rabbitGlow, { toValue: 1, duration: 380, useNativeDriver: true }),
+        Animated.timing(rabbitGlow, { toValue: 0.4, duration: 380, useNativeDriver: true }),
+      ]),
+    ]));
+    anim.start();
+    return () => anim.stop();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <View style={{ gap: 8, alignItems: 'center' }}>
+      <Text style={{ color: '#d4af37', fontSize: 10, fontWeight: '700', letterSpacing: 1 }}>YOU CHOOSE</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <Animated.View style={{ opacity: blink }}>
+          <PieceDemoTile token="F" variant="blink" />
+        </Animated.View>
+        <Animated.View style={{ opacity: rabbitGlow }}>
+          <PieceDemoTile token="R" variant="prey" />
+        </Animated.View>
+        <Animated.View style={{ opacity: blink }}>
+          <PieceDemoTile token="F" variant="blink" />
+        </Animated.View>
+      </View>
+      <Text style={{ color: '#8f9a87', fontSize: 10, textAlign: 'center' }}>Two foxes want the same rabbit</Text>
+    </View>
+  );
+}
+
+// ── Slide 6: Combo counter ───────────────────────────────────────────────────
+function ComboVisual() {
+  const [count, setCount] = React.useState(0);
+  const countScale = React.useRef(new Animated.Value(1)).current;
+
+  React.useEffect(() => {
+    let cancelled = false;
+    let timer;
+    const bump = (n) => {
+      if (cancelled) return;
+      setCount(n);
+      Animated.sequence([
+        Animated.timing(countScale, { toValue: 1.5, duration: 120, useNativeDriver: true }),
+        Animated.timing(countScale, { toValue: 1,   duration: 120, useNativeDriver: true }),
+      ]).start();
+      if (n < 4) {
+        timer = setTimeout(() => bump(n + 1), 700);
+      } else {
+        timer = setTimeout(() => { if (!cancelled) { setCount(0); } }, 1200);
+        timer = setTimeout(() => bump(1), 2000);
+      }
+    };
+    timer = setTimeout(() => bump(1), 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const color = count >= 4 ? '#ff9824' : count >= 3 ? '#d4af37' : count >= 2 ? '#4fd04f' : '#8f9a87';
+
+  return (
+    <View style={{ alignItems: 'center', gap: 12 }}>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        {['F', 'W', 'R', 'G'].map((token) => (
+          <PieceBadge key={token} token={token} />
+        ))}
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Text style={{ color: '#8f9a87', fontSize: 12, fontWeight: '600' }}>Combo</Text>
+        <Animated.View style={{ transform: [{ scale: countScale }] }}>
+          <Text style={{ color, fontSize: 28, fontWeight: '900', letterSpacing: 1 }}>
+            {count > 0 ? `×${count}` : '—'}
+          </Text>
+        </Animated.View>
+      </View>
+    </View>
   );
 }
 

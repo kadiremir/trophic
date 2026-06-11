@@ -425,7 +425,6 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
         <Text style={[styles.goalUnit, { fontSize: sz(12) }]}>pts</Text>
       </View>
       <ProgressBar pct={pct} color="#d4af37" />
-      <Text style={[styles.goalCaption, { fontSize: sz(12), marginTop: sz(8) }]}>{level.objective.label}</Text>
     </View>
   ), [score, pct, sz, level]);
 
@@ -634,7 +633,7 @@ function ProgressBar({ pct, color }) {
       toValue: pct / 100,
       duration: 500,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
 
     if (pct > prevPct.current) {
@@ -647,9 +646,9 @@ function ProgressBar({ pct, color }) {
     prevPct.current = pct;
   }, [pct, fill, glow]);
 
-  const scaleX = fill.interpolate({
+  const widthPct = fill.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 1],
+    outputRange: ['0%', '100%'],
     extrapolate: 'clamp',
   });
 
@@ -658,7 +657,7 @@ function ProgressBar({ pct, color }) {
       <Animated.View
         style={[
           styles.progressFill,
-          { width: '100%', backgroundColor: color, transformOrigin: 'left', transform: [{ scaleX }] },
+          { width: widthPct, backgroundColor: color },
         ]}
       >
         <Animated.View

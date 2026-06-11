@@ -4,6 +4,20 @@ Scripts in `tools/` for generating, validating, and scoring Trophic levels.
 
 ---
 
+## Python version
+
+The generator uses `random.Random` with a fixed seed.  Python's random module
+implementation can differ across **minor versions** (e.g. 3.11 → 3.12 changed
+seeding behaviour for small integers).  The same seed on a different Python
+minor version may produce completely different levels.
+
+**Always use the same Python version across all machines that generate or
+validate levels.**  The CI workflow pins `python-version: '3.12'`; match this
+locally.  If you upgrade Python, regenerate `levels.json` and bump
+`PROGRESS_VERSION` in `App.js` to invalidate old cloud saves.
+
+---
+
 ## Quick start
 
 ```bash
