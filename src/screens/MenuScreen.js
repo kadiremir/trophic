@@ -545,47 +545,47 @@ const HERO_STARS = [
   { left: '96%', top: 42, size: 1, opacity: 0.38 },
 ];
 
+const TITLE_LETTERS = [
+  { char: 'T', color: '#4ade80' },
+  { char: 'R', color: '#60a5fa' },
+  { char: 'O', color: '#818cf8' },
+  { char: 'P', color: '#a855f7' },
+  { char: 'H', color: '#e879f9' },
+  { char: 'I', color: '#f97316' },
+  { char: 'C', color: '#ef4444' },
+];
+
 function TrophicHeroBrand({ wide = false, scale = 1 }) {
   const { width: viewportWidth, contentWidth: cw } = useLayout();
   const sz = (n) => Math.round(n * scale);
-  // Compute a font size that actually fits in the available container width on web.
-  // heroBrand padding = sz(16)*2; appShell width = min(viewport, contentWidth).
   const appShellWidth = Math.min(viewportWidth, cw);
   const titleAvailableWidth = appShellWidth - sz(32) * 2 - sz(16) * 2;
-  // Empirical: "TROPHIC" at 96px = ~548px wide, of which 24px is fixed letter-spacing (6 gaps × 4px).
-  // Character width per em = (548-24)/(7×96) ≈ 0.779. Letter-spacing is constant regardless of size.
-  // Max fontSize = (availableWidth - 24) / (7 × 0.779)
   const titleFontSize = Math.min(sz(64), Math.floor((titleAvailableWidth - 24) / 5.5));
-  const glow = React.useRef(new Animated.Value(0)).current;
+
+  const dropAnims = React.useRef(TITLE_LETTERS.map(() => new Animated.Value(0))).current;
+  const opacityAnims = React.useRef(TITLE_LETTERS.map(() => new Animated.Value(0))).current;
 
   React.useEffect(() => {
-    const loop = Animated.loop(
+    const animations = TITLE_LETTERS.map((_, i) =>
       Animated.sequence([
-        Animated.timing(glow, {
-          toValue: 1,
-          duration: 1500,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: false,
-        }),
-        Animated.timing(glow, {
-          toValue: 0,
-          duration: 1500,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: false,
-        }),
+        Animated.delay(i * 80),
+        Animated.parallel([
+          Animated.spring(dropAnims[i], {
+            toValue: 1,
+            speed: 14,
+            bounciness: 10,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnims[i], {
+            toValue: 1,
+            duration: 120,
+            useNativeDriver: true,
+          }),
+        ]),
       ])
     );
-
-    loop.start();
-    return () => loop.stop();
-  }, [glow]);
-
-  const titleGlow = Platform.OS !== 'web' ? {
-    textShadowRadius: glow.interpolate({
-      inputRange: [0, 1],
-      outputRange: [20, 42],
-    }),
-  } : {};
+    Animated.parallel(animations).start();
+  }, []);
 
   return (
     <View style={[styles.heroBrand, wide && styles.heroBrandWide, { height: sz(140), paddingHorizontal: sz(16), paddingTop: sz(8), marginBottom: sz(10) }]}>
@@ -604,14 +604,33 @@ function TrophicHeroBrand({ wide = false, scale = 1 }) {
           ]}
         />
       ))}
-      <Animated.Text
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        nativeID={Platform.OS === 'web' ? 'trophic-logo-title' : undefined}
-        style={[styles.title, wide && styles.titleWide, { fontSize: titleFontSize, lineHeight: Math.round(titleFontSize * 1.19) }, titleGlow]}
-      >
-        TROPHIC
-      </Animated.Text>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
+        {TITLE_LETTERS.map(({ char, color }, i) => {
+          const translateY = dropAnims[i].interpolate({
+            inputRange: [0, 1],
+            outputRange: [-titleFontSize * 1.2, 0],
+          });
+          return (
+            <Animated.Text
+              key={i}
+              style={[
+                styles.title,
+                wide && styles.titleWide,
+                {
+                  fontSize: titleFontSize,
+                  lineHeight: Math.round(titleFontSize * 1.19),
+                  color,
+                  opacity: opacityAnims[i],
+                  transform: [{ translateY }],
+                  letterSpacing: i < TITLE_LETTERS.length - 1 ? 4 : 0,
+                },
+              ]}
+            >
+              {char}
+            </Animated.Text>
+          );
+        })}
+      </View>
       <Text style={[styles.subtitle, wide && styles.subtitleWide, { fontSize: Math.round(titleFontSize * 0.2), marginTop: sz(10) }]}>CHAIN OF NATURE</Text>
     </View>
   );
