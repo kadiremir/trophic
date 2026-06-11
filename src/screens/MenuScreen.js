@@ -545,16 +545,6 @@ const HERO_STARS = [
   { left: '96%', top: 42, size: 1, opacity: 0.38 },
 ];
 
-const TITLE_LETTERS = [
-  { char: 'T', color: '#4ade80' },
-  { char: 'R', color: '#60a5fa' },
-  { char: 'O', color: '#818cf8' },
-  { char: 'P', color: '#a855f7' },
-  { char: 'H', color: '#e879f9' },
-  { char: 'I', color: '#f97316' },
-  { char: 'C', color: '#ef4444' },
-];
-
 function TrophicHeroBrand({ wide = false, scale = 1 }) {
   const { width: viewportWidth, contentWidth: cw } = useLayout();
   const sz = (n) => Math.round(n * scale);
@@ -562,42 +552,55 @@ function TrophicHeroBrand({ wide = false, scale = 1 }) {
   const titleAvailableWidth = appShellWidth - sz(32) * 2 - sz(16) * 2;
   const titleFontSize = Math.min(sz(64), Math.floor((titleAvailableWidth - 24) / 5.5));
 
-  const dropAnims = React.useRef(TITLE_LETTERS.map(() => new Animated.Value(0))).current;
-  const opacityAnims = React.useRef(TITLE_LETTERS.map(() => new Animated.Value(0))).current;
-  const hueAnim = React.useRef(new Animated.Value(0)).current;
+  const dropAnim = React.useRef(new Animated.Value(0)).current;
+  const opacityAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
-    const dropAnimations = TITLE_LETTERS.map((_, i) =>
-      Animated.sequence([
-        Animated.delay(i * 80),
-        Animated.parallel([
-          Animated.spring(dropAnims[i], {
-            toValue: 1,
-            speed: 14,
-            bounciness: 10,
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacityAnims[i], {
-            toValue: 1,
-            duration: 120,
-            useNativeDriver: true,
-          }),
-        ]),
-      ])
-    );
-    Animated.parallel(dropAnimations).start();
+    if (Platform.OS === 'web') {
+      const styleId = 'trophic-rainbow-style';
+      if (!document.getElementById(styleId)) {
+        const el = document.createElement('style');
+        el.id = styleId;
+        el.textContent = `
+          @keyframes trophic-flow {
+            0%   { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+          }
+          #trophic-title {
+            background: linear-gradient(90deg,
+              hsl(0,95%,65%), hsl(51,95%,65%), hsl(102,95%,65%),
+              hsl(153,95%,65%), hsl(204,95%,65%), hsl(255,95%,65%),
+              hsl(306,95%,65%), hsl(0,95%,65%));
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: trophic-flow 4s linear infinite;
+          }
+        `;
+        document.head.appendChild(el);
+      }
+    }
 
-    const hueLoop = Animated.loop(
-      Animated.timing(hueAnim, {
-        toValue: 360,
-        duration: 4000,
-        easing: Easing.linear,
-        useNativeDriver: false,
-      })
-    );
-    hueLoop.start();
-    return () => hueLoop.stop();
+    Animated.parallel([
+      Animated.spring(dropAnim, {
+        toValue: 1,
+        speed: 10,
+        bounciness: 12,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
+
+  const translateY = dropAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-titleFontSize * 1.5, 0],
+  });
 
   return (
     <View style={[styles.heroBrand, wide && styles.heroBrandWide, { height: sz(140), paddingHorizontal: sz(16), paddingTop: sz(8), marginBottom: sz(10) }]}>
@@ -616,41 +619,22 @@ function TrophicHeroBrand({ wide = false, scale = 1 }) {
           ]}
         />
       ))}
-      <Animated.View style={[
-        { flexDirection: 'row', alignItems: 'flex-end' },
-        Platform.OS === 'web' && {
-          filter: hueAnim.interpolate({
-            inputRange: [0, 360],
-            outputRange: ['hue-rotate(0deg)', 'hue-rotate(360deg)'],
-          }),
-        },
-      ]}>
-        {TITLE_LETTERS.map(({ char, color }, i) => {
-          const translateY = dropAnims[i].interpolate({
-            inputRange: [0, 1],
-            outputRange: [-titleFontSize * 1.2, 0],
-          });
-          return (
-            <Animated.Text
-              key={i}
-              style={[
-                styles.title,
-                wide && styles.titleWide,
-                {
-                  fontSize: titleFontSize,
-                  lineHeight: Math.round(titleFontSize * 1.19),
-                  color,
-                  opacity: opacityAnims[i],
-                  transform: [{ translateY }],
-                  letterSpacing: i < TITLE_LETTERS.length - 1 ? 4 : 0,
-                },
-              ]}
-            >
-              {char}
-            </Animated.Text>
-          );
-        })}
-      </Animated.View>
+      <Animated.Text
+        nativeID="trophic-title"
+        numberOfLines={1}
+        style={[
+          styles.title,
+          wide && styles.titleWide,
+          {
+            fontSize: titleFontSize,
+            lineHeight: Math.round(titleFontSize * 1.19),
+            opacity: opacityAnim,
+            transform: [{ translateY }],
+          },
+        ]}
+      >
+        TROPHIC
+      </Animated.Text>
       <Text style={[styles.subtitle, wide && styles.subtitleWide, { fontSize: Math.round(titleFontSize * 0.2), marginTop: sz(10) }]}>CHAIN OF NATURE</Text>
     </View>
   );
