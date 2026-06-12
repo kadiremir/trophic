@@ -44,7 +44,6 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
   const [dangerCells, setDanger] = useState(new Set());
   const [jumpingFrom, setJumpFrom] = useState(null);
   const [crunchCell, setCrunch] = useState(null);
-  const [scorePopups, setPopups] = useState([]);
   const [flashMsg, setFlashMsg] = useState(null);
   const [showHint, setShowHint] = useState(false);
 
@@ -62,8 +61,6 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
   const scoreBoxRef = useRef(null);
   const [scorePos, setScorePos] = useState({ x: 0, y: 0 });
 
-  const popId = useRef(0);
-  const popTimers = useRef([]);
   const flashTimer = useRef(null);
   const selectedRef = useRef(null);
   const mountedRef = useRef(true);
@@ -77,8 +74,6 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     return () => {
       mountedRef.current = false;
       clearTimeout(flashTimer.current);
-      popTimers.current.forEach(clearTimeout);
-      popTimers.current = [];
     };
   }, []);
 
@@ -87,13 +82,6 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     setFlashMsg({ msg, color, key: ++flashKey.current });
     clearTimeout(flashTimer.current);
     flashTimer.current = setTimeout(() => setFlashMsg(null), 1700);
-  };
-
-  const addPopup = (r, c, pts, color = '#ffd700') => {
-    const id = ++popId.current;
-    setPopups((p) => [...p, { id, r, c, pts, color }]);
-    const t = setTimeout(() => setPopups((p) => p.filter((x) => x.id !== id)), 1000);
-    popTimers.current.push(t);
   };
 
   const reset = () => {
@@ -109,7 +97,6 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     setDanger(new Set());
     setJumpFrom(null);
     setCrunch(null);
-    setPopups([]);
     setFlashMsg(null);
     setShowHint(false);
     setPendingChoice(null);
@@ -154,8 +141,11 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
 
     // Score popup above predator cell + orb flying to score card
     const pts = ev.pts || 0;
-    addPopup(tr, tc, pts);
     gridRef.current?.measureCell(tr, tc).then(({ x, y }) => {
+      if (pts > 0) {
+        const fid = `fly-${++defeatFXId.current}`;
+        setDefeatFX((prev) => [...prev, { id: fid, x, y, score: `+${pts}` }]);
+      }
       const id = `orb-${++orbFXId.current}`;
       const arcSide = Math.random() < 0.5 ? 1 : -1;
       setOrbFX((prev) => [...prev, { id, sx: x, sy: y, arcSide }]);
@@ -553,7 +543,6 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
       choicePredators={choicePredators}
       jumpingFrom={jumpingFrom}
       crunchCell={crunchCell}
-      scorePopups={scorePopups}
       containerWidth={gridContainerWidth - sz(32) * 2}
     />
   );

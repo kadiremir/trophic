@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, us
 import { View, StyleSheet, useWindowDimensions, PanResponder, Animated, Easing, Platform } from 'react-native';
 import Cell from './Cell';
 import JumpSprite from './JumpSprite';
-import ScorePopup from './ScorePopup';
 import PieceIcon from './PieceIcon';
 import { GRID_SIZE, STICKER } from '../game/constants';
 import { cellKey } from '../game/engine';
@@ -39,7 +38,6 @@ const Grid = React.memo(React.forwardRef(function Grid({
   choicePredators,
   jumpingFrom,
   crunchCell,
-  scorePopups = [],
   containerWidth,
 }, ref) {
   const { width } = useWindowDimensions();
@@ -65,12 +63,16 @@ const Grid = React.memo(React.forwardRef(function Grid({
     measureCell: (r, c) => new Promise((resolve) => {
       const cs = cellSizeRef.current;
       const offsetX = boardOffsetXRef.current;
-      containerRef.current?.measureInWindow((cLeft, cTop) => {
-        resolve({
-          x: cLeft + GRID_PADDING + offsetX + c * (cs + CELL_GAP) + CELL_GAP / 2 + cs / 2,
-          y: cTop  + GRID_PADDING + r * (cs + CELL_GAP) + CELL_GAP / 2 + cs / 2,
-        });
+      const compute = (cLeft, cTop) => resolve({
+        x: cLeft + GRID_PADDING + offsetX + c * (cs + CELL_GAP) + CELL_GAP / 2 + cs / 2,
+        y: cTop  + GRID_PADDING + r * (cs + CELL_GAP) + CELL_GAP / 2 + cs / 2,
       });
+      if (Platform.OS === 'web' && containerRef.current?.getBoundingClientRect) {
+        const rect = containerRef.current.getBoundingClientRect();
+        compute(rect.left, rect.top);
+      } else {
+        containerRef.current?.measureInWindow(compute);
+      }
     }),
   }), []);
 
@@ -387,20 +389,6 @@ const Grid = React.memo(React.forwardRef(function Grid({
         />
       )}
 
-      {scorePopups.map((p) => {
-        const origin = getCellOrigin(p.r, p.c, cellSize, boardOffsetX);
-        return (
-          <ScorePopup
-            key={p.id}
-            pts={p.pts}
-            x={origin.x - CELL_GAP / 2}
-            y={origin.y - CELL_GAP / 2}
-            cellSize={cellSize}
-            color={p.color}
-          />
-        );
-      })}
-
       <View
         ref={boardRef}
         style={[styles.board, { width: boardSize, height: boardSize }]}
@@ -446,6 +434,7 @@ const Grid = React.memo(React.forwardRef(function Grid({
           </View>
         ))}
       </View>
+
     </View>
   );
 }));
