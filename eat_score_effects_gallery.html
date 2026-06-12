@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Score Flyout Templates — Trophic</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #06080f;
+    color: #c0c8e8;
+    font-family: system-ui, -apple-system, sans-serif;
+    padding: 32px 24px 64px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 900;
+    color: #FFD700;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .meta { font-size: 13px; color: #445; margin-bottom: 36px; }
+  .active-badge {
+    display: inline-block;
+    background: #60E080;
+    color: #0a1a0e;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 10px;
+    vertical-align: middle;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+  }
+
+  .card {
+    background: #0d0f1c;
+    border: 1px solid #1c1e30;
+    border-radius: 14px;
+    padding: 20px 20px 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card.is-active { border-color: #60E080; background: #0b120d; }
+  .card.original  { border-color: #444; }
+
+  .card-num {
+    font-size: 11px;
+    font-weight: 800;
+    color: #333;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .card-name {
+    font-size: 18px;
+    font-weight: 900;
+    color: #e0e8ff;
+    margin-bottom: 4px;
+  }
+  .card-tag {
+    font-size: 11px;
+    font-weight: 700;
+    color: #5060a0;
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+  }
+
+  .stage {
+    height: 130px;
+    background: #080a14;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    user-select: none;
+  }
+  .stage:hover { background: #0c0e1a; }
+  .stage-hint {
+    position: absolute;
+    bottom: 8px; right: 10px;
+    font-size: 10px; color: #2a2e50;
+    font-weight: 600;
+  }
+
+  .desc { font-size: 12px; color: #5060a0; line-height: 1.6; }
+
+  .mechanism {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .pill {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+  }
+  .pill-motion  { background: #1a1a3a; color: #8090d0; }
+  .pill-medium  { background: #1a2a1a; color: #70b070; }
+  .pill-tone    { background: #2a1a1a; color: #c07060; }
+
+  h2 { font-size: 13px; font-weight: 700; color: #3a4070; margin: 40px 0 16px; letter-spacing: 1px; text-transform: uppercase; }
+
+  /* ── Animations ── */
+
+  /* 0 ScoreFlyout — gold number bezier arc */
+  @keyframes flyout-rise {
+    0%   { transform: translateY(0)   scale(0); opacity: 0; }
+    10%  { transform: translateY(-10px) scale(1.55); opacity: 1; }
+    20%  { transform: translateY(-20px) scale(1.0); }
+    80%  { opacity: 1; }
+    100% { transform: translateY(-80px) scale(1.0) translateX(8px); opacity: 0; }
+  }
+  .demo-flyout .score {
+    position: absolute; left: 50%; top: 60%;
+    transform: translateX(-50%);
+    font-size: 48px; font-weight: 900; color: #FFD700;
+    text-shadow: 0 0 18px #FFD700;
+    animation: flyout-rise 1.2s ease-out forwards;
+    animation-play-state: paused;
+  }
+  .stage:hover .demo-flyout .score { animation-play-state: running; }
+
+  /* 1 ComicChomp */
+  @keyframes chomp-pop {
+    0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
+    30%  { transform: scale(1.3) rotate(5deg);  opacity: 1; }
+    55%  { transform: scale(1.0) rotate(0deg); }
+    80%  { opacity: 1; }
+    100% { transform: scale(0.8) rotate(0deg); opacity: 0; }
+  }
+  @keyframes line-burst {
+    0%   { transform: rotate(var(--a)) scaleX(0); opacity: 0; }
+    25%  { transform: rotate(var(--a)) scaleX(1.1); opacity: 1; }
+    60%  { transform: rotate(var(--a)) scaleX(1.4); opacity: 0.6; }
+    100% { transform: rotate(var(--a)) scaleX(0); opacity: 0; }
+  }
+  .demo-chomp { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .demo-chomp .word {
+    font-size: 26px; font-weight: 900; color: #FF4040;
+    text-shadow: 2px 2px 0 #000;
+    animation: chomp-pop 1s ease-out forwards;
+    animation-play-state: paused;
+    position: relative; z-index: 2;
+  }
+  .demo-chomp .line {
+    position: absolute; width: 44px; height: 5px; border-radius: 3px;
+    background: #FFD700; left: calc(50% - 22px); top: calc(50% - 2.5px);
+    transform-origin: 22px 2.5px;
+    animation: line-burst 0.9s ease-out forwards;
+    animation-play-state: paused;
+  }
+  .stage:hover .demo-chomp .word,
+  .stage:hover .demo-chomp .line { animation-play-state: running; }
+
+  /* 2 ShockwaveRing */
+  @keyframes ring-expand {
+    0%   { transform: scale(0.1); opacity: 0.9; }
+    100% { transform: scale(1);   opacity: 0; }
+  }
+  .demo-ring { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .demo-ring .ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 4px solid #FFD700;
+    animation: ring-expand 0.7s ease-out forwards;
+    animation-play-state: paused;
+  }
+  .demo-ring .r1 { width: 110px; height: 110px; border-color: #FFD700; animation-delay: 0s; }
+  .demo-ring .r2 { width: 150px; height: 150px; border-width: 2.5px; border-color: #FF9020; animation-delay: 0.12s; }
+  .demo-ring .r3 { width: 180px; height: 180px; border-width: 1.5px; border-color: #FF4020; animation-delay: 0.24s; }
+  .demo-ring .score {
+    font-size: 44px; font-weight: 900; color: #FFD700;
+    text-shadow: 0 0 14px #000;
+    animation: flyout-rise 0.9s ease-out forwards;
+    animation-play-state: paused;
+  }
+  .stage:hover .demo-ring .ring,
+  .stage:hover .demo-ring .score { animation-play-state: running; }
+
+  /* 3 ParticleBurst */
+  @keyframes dot-fly {
+    0%   { transform: translate(0, 0) scale(1.3); opacity: 1; }
+    40%  { opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(0.2); opacity: 0; }
+  }
+  .demo-particles { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .demo-particles .dot {
+    position: absolute;
+    width: 10px; height: 10px; border-radius: 50%;
+    animation: dot-fly 0.9s ease-out forwards;
+    animation-play-state: paused;
+  }
+  .demo-particles .score {
+    font-size: 40px; font-weight: 900; color: #FFD700;
+    text-shadow: 0 0 12px #000;
+    animation: flyout-rise 0.8s ease-out forwards;
+    animation-play-state: paused;
+  }
+  .stage:hover .demo-particles .dot,
+  .stage:hover .demo-particles .score { animation-play-state: running; }
+
+  /* 4 ScoreVacuum ★ ACTIVE */
+  @keyframes vacuum-suck {
+    0%   { transform: translateY(0)    scale(1.2); opacity: 0; }
+    8%   { transform: translateY(0)    scale(1.0); opacity: 1; }
+    40%  { transform: translateY(-10px) scale(1.0); opacity: 1; }
+    100% { transform: translateY(-160px) scale(0); opacity: 0; }
+  }
+  @keyframes ghost-trail {
+    0%   { opacity: 0; }
+    15%  { opacity: var(--ghost-op); }
+    100% { transform: translateY(-100px) scale(0); opacity: 0; }
+  }
+  .demo-vacuum { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .demo-vacuum .score {
+    position: absolute;
+    font-size: 46px; font-weight: 900; color: #80FFFF;
+    text-shadow: 0 0 16px #00AAFF;
+    animation: vacuum-suck 1.1s cubic-bezier(.4,0,1,1) forwards;
+    animation-play-state: paused;
+  }
+  .demo-vacuum .ghost {
+    position: absolute;
+    font-size: 28px; font-weight: 900; color: #80FFFF; opacity: 0;
+    animation: ghost-trail 1.1s ease-in forwards;
+    animation-play-state: paused;
+  }
+  .demo-vacuum .g1 { animation-delay: 0.32s; --ghost-op: 0.45; top: calc(50% + 20px); }
+  .demo-vacuum .g2 { animation-delay: 0.44s; --ghost-op: 0.25; top: calc(50% + 36px); }
+  .demo-vacuum .g3 { animation-delay: 0.56s; --ghost-op: 0.12; top: calc(50% + 50px); }
+  .stage:hover .demo-vacuum .score,
+  .stage:hover .demo-vacuum .ghost { animation-play-state: running; }
+
+  /* 5 SquashGulp */
+  @keyframes gulp {
+    0%   { transform: scaleX(0.4) scaleY(2.2); opacity: 0; }
+    5%   { opacity: 1; }
+    25%  { transform: scaleX(1.8) scaleY(0.5); }
+    40%  { transform: scaleX(1.0) scaleY(1.0); }
+    55%  { transform: scaleX(1.3) scaleY(0.7); }
+    100% { transform: scaleX(0)   scaleY(0); opacity: 0; }
+  }
+  @keyframes gulp-circle {
+    0%   { transform: scale(0); opacity: 0; }
+    20%  { transform: scale(1.4); opacity: 0.6; }
+    40%  { transform: scale(1.1); }
+    100% { transform: scale(0); opacity: 0; }
+  }
+  .demo-gulp { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .demo-gulp .circle {
+    position: absolute; width: 70px; height: 70px; border-radius: 50%;
+    background: #FF8020;
+    animation: gulp-circle 0.9s ease-out forwards;
+    animation-play-state: paused;
+  }
+  .demo-gulp .emoji {
+    position: absolute;
+    font-size: 40px;
+    animation: gulp 0.9s ease-out forwards;
+    animation-play-state: paused;
+  }
+  .stage:hover .demo-gulp .circle,
+  .stage:hover .demo-gulp .emoji { animation-play-state: running; }
+
+  /* 6 ComboStacker */
+  @keyframes slide-left  { from { transform: translateX(-80px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes slide-right { from { transform: translateX(80px);  opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes badge-pop {
+    0%   { transform: scale(0); opacity: 0; }
+    60%  { transform: scale(1.1); opacity: 1; }
+    80%  { transform: scale(1.0); }
+    100% { transform: scale(1.0); opacity: 1; }
+  }
+  .demo-combo { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .demo-combo .score-l {
+    font-size: 40px; font-weight: 900; color: #FFD700;
+    text-shadow: 0 0 12px #000;
+    animation: slide-left 0.3s ease-out forwards, badge-pop 0.4s 0.35s ease-out forwards;
+    animation-play-state: paused;
+  }
+  .demo-combo .combo-r {
+    font-size: 18px; font-weight: 900; color: #FF6040; letter-spacing: 2px;
+    animation: slide-right 0.3s ease-out forwards;
+    animation-play-state: paused;
+  }
+  .demo-combo .badge {
+    background: #FF4020; border-radius: 5px;
+    padding: 2px 10px; font-size: 11px; font-weight: 800; color: #fff; letter-spacing: 1px;
+    animation: badge-pop 0.5s 0.35s ease-out both;
+    animation-play-state: paused;
+  }
+  .stage:hover .demo-combo .score-l,
+  .stage:hover .demo-combo .combo-r,
+  .stage:hover .demo-combo .badge { animation-play-state: running; }
+
+  /* 7 StrikeSlash */
+  @keyframes slash-sweep { from { transform: rotate(45deg)  scaleX(0); } to { transform: rotate(45deg)  scaleX(1.4); opacity: 0; } }
+  @keyframes slash-sweep2{ from { transform: rotate(-45deg) scaleX(0); } to { transform: rotate(-45deg) scaleX(1.4); opacity: 0; } }
+  @keyframes score-drop {
+    0%   { transform: translateY(-30px) scale(0); opacity: 0; }
+    50%  { transform: translateY(4px)   scale(1.1); opacity: 1; }
+    70%  { transform: translateY(0)     scale(1.0); }
+    85%  { opacity: 1; }
+    100% { transform: translateY(0); opacity: 0; }
+  }
+  .demo-slash { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .demo-slash .line {
+    position: absolute; width: 90px; height: 8px; border-radius: 4px;
+    box-shadow: 0 0 10px #FFD700;
+    animation-duration: 0.5s; animation-fill-mode: forwards; animation-timing-function: ease-out;
+    animation-play-state: paused;
+  }
+  .demo-slash .l1 { background: #FFD700; animation-name: slash-sweep;  }
+  .demo-slash .l2 { background: #FF8040; animation-name: slash-sweep2; animation-delay: 0.06s; }
+  .demo-slash .score {
+    font-size: 46px; font-weight: 900; color: #FFD700;
+    text-shadow: 0 0 12px #FF4000;
+    animation: score-drop 1s 0.14s ease-out forwards;
+    animation-play-state: paused;
+  }
+  .stage:hover .demo-slash .line,
+  .stage:hover .demo-slash .score { animation-play-state: running; }
+
+  /* 8 ScreenFlash */
+  @keyframes flash-expand {
+    0%   { transform: scale(0);   opacity: 0.85; }
+    100% { transform: scale(2.5); opacity: 0; }
+  }
+  .demo-flash { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .demo-flash .flash-circle {
+    position: absolute; width: 80px; height: 80px; border-radius: 50%;
+    background: #fff; box-shadow: 0 0 40px #fff;
+    animation: flash-expand 0.4s ease-out forwards;
+    animation-play-state: paused;
+  }
+  .demo-flash .score {
+    position: absolute;
+    font-size: 50px; font-weight: 900; color: #fff;
+    text-shadow: 0 0 16px #4040FF;
+    animation: score-drop 1s 0.08s ease-out forwards;
+    animation-play-state: paused;
+  }
+  .stage:hover .demo-flash .flash-circle,
+  .stage:hover .demo-flash .score { animation-play-state: running; }
+
+  /* 9 NumberSplatter */
+  @keyframes shard-out { from { transform: translate(0,0) rotate(0deg) scale(1.3); opacity: 1; } to { transform: translate(var(--sx), var(--sy)) rotate(var(--sr)) scale(0.8); opacity: 0.7; } }
+  @keyframes shard-back { from { transform: translate(var(--sx), var(--sy)) rotate(var(--sr)) scale(0.8); opacity: 0.7; } to { transform: translate(0,0) rotate(0deg) scale(1.0); opacity: 0; } }
+  .demo-splatter { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .demo-splatter .shard {
+    position: absolute;
+    font-size: 44px; font-weight: 900;
+    text-shadow: 0 0 10px #000;
+    animation: shard-out 0.22s ease-out forwards, shard-back 0.4s 0.3s ease-in-out forwards;
+    animation-play-state: paused;
+  }
+  .stage:hover .demo-splatter .shard { animation-play-state: running; }
+
+  /* 10 ConfettiBurst */
+  @keyframes confetti-fly {
+    0%   { transform: translate(0,0) rotate(0deg); opacity: 1; }
+    55%  { opacity: 1; }
+    100% { transform: translate(var(--cx), var(--cy)) rotate(var(--cr)); opacity: 0; }
+  }
+  .demo-confetti { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .demo-confetti .piece {
+    position: absolute;
+    border-radius: 2px;
+    animation: confetti-fly 0.9s ease-out forwards;
+    animation-play-state: paused;
+  }
+  .demo-confetti .score {
+    position: absolute;
+    font-size: 44px; font-weight: 900; color: #FFD700;
+    text-shadow: 0 0 10px #000;
+    animation: flyout-rise 0.9s ease-out forwards;
+    animation-play-state: paused;
+  }
+  .stage:hover .demo-confetti .piece,
+  .stage:hover .demo-confetti .score { animation-play-state: running; }
+</style>
+</head>
+<body>
+
+<h1>Score Flyout Templates</h1>
+<p class="meta">Trophic · <code>src/effects/</code> · Hover a stage to preview · Active in-game: <strong style="color:#60E080">ScoreVacuum (#4)</strong></p>
+
+<h2>Original</h2>
+<div class="grid">
+
+  <!-- 0 ScoreFlyout -->
+  <div class="card original">
+    <div class="card-num">EFFECT 0</div>
+    <div class="card-name">ScoreFlyout</div>
+    <div class="card-tag">ORIGINAL</div>
+    <div class="stage">
+      <div class="demo-flyout">
+        <span class="score">+20</span>
+      </div>
+      <span class="stage-hint">hover to play</span>
+    </div>
+    <p class="desc">Gold number flies upward on a bezier arc with scale-overshoot bounce, then fades out. The original.</p>
+    <div class="mechanism">
+      <span class="pill pill-motion">bezier arc</span>
+      <span class="pill pill-medium">animated text</span>
+      <span class="pill pill-tone">classic arcade</span>
+    </div>
+  </div>
+
+</div>
+
+<h2>New Effects</h2>
+<div class="grid">
+
+  <!-- 1 ComicChomp -->
+  <div class="card">
+    <div class="card-num">EFFECT 1</div>
+    <div class="card-name">ComicChomp</div>
+    <div class="card-tag">COMIC-BOOK IMPACT</div>
+    <div class="stage">
+      <div class="demo-chomp">
+        <div class="line" style="--a:0deg"></div>
+        <div class="line" style="--a:45deg"></div>
+        <div class="line" style="--a:90deg"></div>
+        <div class="line" style="--a:135deg"></div>
+        <div class="line" style="--a:180deg"></div>
+        <div class="line" style="--a:225deg"></div>
+        <div class="line" style="--a:270deg"></div>
+        <div class="line" style="--a:315deg"></div>
+        <span class="word">CHOMP!</span>
+      </div>
+      <span class="stage-hint">hover to play</span>
+    </div>
+    <p class="desc">"CHOMP!" pops in with rotation overshoot and 8 radiating impact lines. Score drifts up above it.</p>
+    <div class="mechanism">
+      <span class="pill pill-motion">spring overshoot</span>
+      <span class="pill pill-medium">word-art + lines</span>
+      <span class="pill pill-tone">comic-book</span>
+    </div>
+  </div>
+
+  <!-- 2 ShockwaveRing -->
+  <div class="card">
+    <div class="card-num">EFFECT 2</div>
+    <div class="card-name">ShockwaveRing</div>
+    <div class="card-tag">EXPANDING RINGS</div>
+    <div class="stage">
+      <div class="demo-ring">
+        <div class="ring r1"></div>
+        <div class="ring r2"></div>
+        <div class="ring r3"></div>
+        <span class="score">+3</span>
+      </div>
+      <span class="stage-hint">hover to play</span>
+    </div>
+    <p class="desc">Three concentric rings expand outward from the eat point, staggered 120ms each. Score fades in center.</p>
+    <div class="mechanism">
+      <span class="pill pill-motion">expanding shockwave</span>
+      <span class="pill pill-medium">shape rings</span>
+      <span class="pill pill-tone">juicy / impact</span>
+    </div>
+  </div>
+
+  <!-- 3 ParticleBurst -->
+  <div class="card">
+    <div class="card-num">EFFECT 3</div>
+    <div class="card-name">ParticleBurst</div>
+    <div class="card-tag">PHYSICS SCATTER</div>
+    <div class="stage">
+      <div class="demo-particles">
+        <div class="dot" style="background:#FFD700;--dx:55px;--dy:-40px;"></div>
+        <div class="dot" style="background:#FF6040;--dx:35px;--dy:-65px;"></div>
+        <div class="dot" style="background:#60E060;--dx:-5px;--dy:-70px;"></div>
+        <div class="dot" style="background:#40C0FF;--dx:-40px;--dy:-55px;"></div>
+        <div class="dot" style="background:#E060FF;--dx:-60px;--dy:-20px;"></div>
+        <div class="dot" style="background:#FF40A0;--dx:-55px;--dy:20px;"></div>
+        <div class="dot" style="background:#FFD700;--dx:-30px;--dy:52px;"></div>
+        <div class="dot" style="background:#60E060;--dx:10px;--dy:62px;"></div>
+        <div class="dot" style="background:#40C0FF;--dx:48px;--dy:48px;"></div>
+        <div class="dot" style="background:#FF6040;--dx:65px;--dy:15px;"></div>
+        <span class="score">+20</span>
+      </div>
+      <span class="stage-hint">hover to play</span>
+    </div>
+    <p class="desc">12 colored dots scatter with simulated gravity (parabolic arcs). Score stays at center briefly then rises.</p>
+    <div class="mechanism">
+      <span class="pill pill-motion">gravity arc</span>
+      <span class="pill pill-medium">particle burst</span>
+      <span class="pill pill-tone">playful / arcade</span>
+    </div>
+  </div>
+
+  <!-- 4 ScoreVacuum ★ ACTIVE -->
+  <div class="card is-active">
+    <div class="card-num">EFFECT 4 <span class="active-badge">★ ACTIVE</span></div>
+    <div class="card-name">ScoreVacuum</div>
+    <div class="card-tag">VACUUM SUCK-AWAY</div>
+    <div class="stage">
+      <div class="demo-vacuum">
+        <span class="ghost g1">+</span>
+        <span class="ghost g2">+</span>
+        <span class="ghost g3">+</span>
+        <span class="score">+8</span>
+      </div>
+      <span class="stage-hint">hover to play</span>
+    </div>
+    <p class="desc">Score pops in at full size, then accelerates upward while shrinking to nothing — three faint ghost copies trail behind it as it vanishes.</p>
+    <div class="mechanism">
+      <span class="pill pill-motion">vacuum suck-in</span>
+      <span class="pill pill-medium">text + ghost trail</span>
+      <span class="pill pill-tone">cool / sci-fi</span>
+    </div>
+  </div>
+
+  <!-- 5 SquashGulp -->
+  <div class="card">
+    <div class="card-num">EFFECT 5</div>
+    <div class="card-name">SquashGulp</div>
+    <div class="card-tag">CARTOONY GULP</div>
+    <div class="stage">
+      <div class="demo-gulp">
+        <div class="circle"></div>
+        <span class="emoji">💥</span>
+      </div>
+      <span class="stage-hint">hover to play</span>
+    </div>
+    <p class="desc">scaleX/scaleY ping-pong: tall-and-thin → wide-and-flat → normal → final squash to nothing. Classic cartoon squash-and-stretch.</p>
+    <div class="mechanism">
+      <span class="pill pill-motion">squash-stretch</span>
+      <span class="pill pill-medium">shape + sprite</span>
+      <span class="pill pill-tone">cartoony</span>
+    </div>
+  </div>
+
+  <!-- 6 ComboStacker -->
+  <div class="card">
+    <div class="card-num">EFFECT 6</div>
+    <div class="card-name">ComboStacker</div>
+    <div class="card-tag">SLIDE-IN COLLISION</div>
+    <div class="stage">
+      <div class="demo-combo">
+        <span class="score-l">+20</span>
+        <span class="combo-r">COMBO!</span>
+        <span class="badge">✦ COMBO ✦</span>
+      </div>
+      <span class="stage-hint">hover to play</span>
+    </div>
+    <p class="desc">Score slides in from the left, "COMBO!" from the right, they collide at center. A merged badge bounces into place.</p>
+    <div class="mechanism">
+      <span class="pill pill-motion">slide collision</span>
+      <span class="pill pill-medium">stacked text</span>
+      <span class="pill pill-tone">celebratory</span>
+    </div>
+  </div>
+
+  <!-- 7 StrikeSlash -->
+  <div class="card">
+    <div class="card-num">EFFECT 7</div>
+    <div class="card-name">StrikeSlash</div>
+    <div class="card-tag">SWORD SLASH</div>
+    <div class="stage">
+      <div class="demo-slash">
+        <div class="line l1"></div>
+        <div class="line l2"></div>
+        <span class="score">+8</span>
+      </div>
+      <span class="stage-hint">hover to play</span>
+    </div>
+    <p class="desc">Two crossing diagonal lines sweep in (like an × sword strike), then the score number drops in from above with a bounce.</p>
+    <div class="mechanism">
+      <span class="pill pill-motion">strike trail</span>
+      <span class="pill pill-medium">shape slash</span>
+      <span class="pill pill-tone">action / impact</span>
+    </div>
+  </div>
+
+  <!-- 8 ScreenFlash -->
+  <div class="card">
+    <div class="card-num">EFFECT 8</div>
+    <div class="card-name">ScreenFlash</div>
+    <div class="card-tag">HIT-STOP FLASH</div>
+    <div class="stage">
+      <div class="demo-flash">
+        <div class="flash-circle"></div>
+        <span class="score">+20</span>
+      </div>
+      <span class="stage-hint">hover to play</span>
+    </div>
+    <p class="desc">A white radial circle explodes from the eat point and fades out (hit-stop feel). Score drops in from above with a spring bounce.</p>
+    <div class="mechanism">
+      <span class="pill pill-motion">radial flash</span>
+      <span class="pill pill-medium">screen flash</span>
+      <span class="pill pill-tone">punch / arcade</span>
+    </div>
+  </div>
+
+  <!-- 9 NumberSplatter -->
+  <div class="card">
+    <div class="card-num">EFFECT 9</div>
+    <div class="card-name">NumberSplatter</div>
+    <div class="card-tag">DIGIT EXPLOSION</div>
+    <div class="stage">
+      <div class="demo-splatter">
+        <span class="shard" style="color:#FFD700;--sx:-52px;--sy:-30px;--sr:-40deg">+</span>
+        <span class="shard" style="color:#FF6040;--sx:10px;--sy:-58px;--sr:25deg">2</span>
+        <span class="shard" style="color:#40C0FF;--sx:55px;--sy:-20px;--sr:55deg">0</span>
+      </div>
+      <span class="stage-hint">hover to play</span>
+    </div>
+    <p class="desc">Each character of "+20" launches in its own direction with a spin, then all spring back to center and merge.</p>
+    <div class="mechanism">
+      <span class="pill pill-motion">physics scatter + snap</span>
+      <span class="pill pill-medium">split text</span>
+      <span class="pill pill-tone">playful / kinetic</span>
+    </div>
+  </div>
+
+  <!-- 10 ConfettiBurst -->
+  <div class="card">
+    <div class="card-num">EFFECT 10</div>
+    <div class="card-name">ConfettiBurst</div>
+    <div class="card-tag">CONFETTI SHOWER</div>
+    <div class="stage">
+      <div class="demo-confetti">
+        <div class="piece" style="width:12px;height:6px;background:#FF4040;--cx:-55px;--cy:-42px;--cr:240deg"></div>
+        <div class="piece" style="width:9px;height:5px;background:#FF9020;--cx:-20px;--cy:-65px;--cr:-120deg"></div>
+        <div class="piece" style="width:11px;height:5px;background:#FFE000;--cx:25px;--cy:-70px;--cr:300deg"></div>
+        <div class="piece" style="width:8px;height:6px;background:#40D040;--cx:58px;--cy:-38px;--cr:-200deg"></div>
+        <div class="piece" style="width:10px;height:4px;background:#40A0FF;--cx:62px;--cy:10px;--cr:180deg"></div>
+        <div class="piece" style="width:9px;height:5px;background:#A040FF;--cx:40px;--cy:55px;--cr:-90deg"></div>
+        <div class="piece" style="width:12px;height:5px;background:#FF40A0;--cx:-10px;--cy:68px;--cr:270deg"></div>
+        <div class="piece" style="width:8px;height:6px;background:#40FFFF;--cx:-50px;--cy:45px;--cr:-150deg"></div>
+        <div class="piece" style="width:10px;height:4px;background:#FF4040;--cx:-65px;--cy:5px;--cr:110deg"></div>
+        <span class="score">+8</span>
+      </div>
+      <span class="stage-hint">hover to play</span>
+    </div>
+    <p class="desc">16 colored rectangles explode outward with rotation, then fall with simulated gravity. Score rises cleanly through the shower.</p>
+    <div class="mechanism">
+      <span class="pill pill-motion">gravity fall</span>
+      <span class="pill pill-medium">confetti particles</span>
+      <span class="pill pill-tone">celebratory</span>
+    </div>
+  </div>
+
+</div>
+
+<p style="margin-top:48px;font-size:12px;color:#222;text-align:center">
+  Trophic · src/effects/ · To switch in-game: edit <code style="color:#333">src/effects/activeEffect.js</code>
+</p>
+
+</body>
+</html>

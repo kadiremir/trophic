@@ -8,6 +8,7 @@ import AuthButton from './src/components/AuthButton';
 import { onAuthChange, loadProgress, saveProgress } from './src/firebase';
 import { LEVELS } from './src/game/levels';
 import { useLayout } from './src/hooks/useLayout';
+import { EatScoreEffectGallery } from './src/screens/EatScoreEffectGallery';
 
 // Bump this whenever levels change to reset all users' cloud progress.
 const PROGRESS_VERSION = 3;
@@ -87,6 +88,14 @@ export default function App() {
 
   if (Platform.OS !== 'web' && !fontsLoaded) return null;
 
+  if (screen === 'gallery') {
+    return (
+      <View style={styles.root}>
+        <EatScoreEffectGallery onBack={() => setScreen('menu')} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.root}>
       <AmbientBackground />
@@ -99,6 +108,7 @@ export default function App() {
               onSelect={handleSelect}
               active={screen === 'menu'}
               authButton={<AuthButton user={user ?? null} />}
+              onOpenGallery={() => setScreen('gallery')}
             />
           </View>
           {screen === 'game' && (
