@@ -67,8 +67,9 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     };
   }, []);
 
+  const flashKey = useRef(0);
   const showFlash = (msg, color = '#ffd700') => {
-    setFlashMsg({ msg, color });
+    setFlashMsg({ msg, color, key: ++flashKey.current });
     clearTimeout(flashTimer.current);
     flashTimer.current = setTimeout(() => setFlashMsg(null), 1700);
   };
@@ -177,15 +178,16 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     setPhaseSync('animating');
 
     (async () => {
-      showFlash(
-        `${PIECE_LABELS[option.pred]} resolves first: ${cellLabel(option.from)} -> ${cellLabel(option.to)}`,
-        PAL[option.pred]?.glow || '#ffd700'
-      );
-
       let current = await animateJump(
         { ...option, kind: 'choose', pts: PREY_POINTS[option.prey] || 0 },
         cloneGrid(choice.workingGrid)
       );
+      if (!mountedRef.current) return;
+      showFlash(
+        `${PIECE_LABELS[option.pred]} eats ${PIECE_LABELS[option.prey]}! +${PREY_POINTS[option.prey] || 0}`,
+        PAL[option.prey]?.glow || '#fff'
+      );
+      await delay(1100);
       if (!mountedRef.current) return;
 
       const chosen = applyForcedChoice(choice.workingGrid, option);
@@ -196,11 +198,16 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
       for (const ev of afterAuto.events) {
         current = await animateJump(ev, current);
         if (!mountedRef.current) return;
+        showFlash(`${PIECE_LABELS[ev.pred]} eats ${PIECE_LABELS[ev.prey]}! +${PREY_POINTS[ev.prey] || 0}`, PAL[ev.prey]?.glow || '#fff');
+        await delay(1100);
+        if (!mountedRef.current) return;
       }
       current = afterAuto.grid;
 
       const nextChoice = getForcedChoice(current);
       if (nextChoice) {
+        await delay(900);
+        if (!mountedRef.current) return;
         setPendingChoice({
           options: nextChoice,
           accPts: newAccPts,
@@ -211,6 +218,11 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
         return;
       }
 
+      if (newAccEventCount > 1) {
+        showFlash(`Chain x${newAccEventCount}! 🔥 +${newAccPts}`, '#ffd700');
+        await delay(1400);
+        if (!mountedRef.current) return;
+      }
       finalizeTurn(current, newAccPts, newAccEventCount, score, moves, maxCombo);
     })();
   }, [finalizeTurn, maxCombo, moves, pendingChoice, phase, score]);
@@ -252,17 +264,13 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     afterMove[sr][sc] = null;
     setDisplayGrid(afterMove);
 
-    if (res.events.length > 1) {
-      showFlash(`Chain x${res.events.length}! +${res.pts}`, '#ffd700');
-    } else if (res.events.length === 1) {
-      const e = res.events[0];
-      showFlash(`${PIECE_LABELS[e.pred]} eats ${PIECE_LABELS[e.prey]}! +${res.pts}`, PAL[e.prey]?.glow || '#fff');
-    }
-
     (async () => {
       let current = cloneGrid(afterMove);
       for (const ev of res.events) {
         current = await animateJump(ev, current);
+        if (!mountedRef.current) return;
+        showFlash(`${PIECE_LABELS[ev.pred]} eats ${PIECE_LABELS[ev.prey]}! +${PREY_POINTS[ev.prey] || 0}`, PAL[ev.prey]?.glow || '#fff');
+        await delay(1100);
         if (!mountedRef.current) return;
       }
       current = res.grid;
@@ -270,6 +278,8 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
       if (!mountedRef.current) return;
       const choice = getForcedChoice(current);
       if (choice) {
+        await delay(900);
+        if (!mountedRef.current) return;
         setPendingChoice({
           options: choice,
           accPts: res.pts,
@@ -277,10 +287,14 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
           workingGrid: current,
         });
         setPhaseSync('choosing');
-        showFlash('Choose which same-tier eat resolves first.', '#ffcc00');
         return;
       }
 
+      if (res.events.length > 1) {
+        showFlash(`Chain x${res.events.length}! 🔥 +${res.pts}`, '#ffd700');
+        await delay(1400);
+        if (!mountedRef.current) return;
+      }
       finalizeTurn(current, res.pts, res.events.length, score, moves, maxCombo);
     })();
   }, [displayGrid, finalizeTurn, maxCombo, moves, score]);
@@ -425,26 +439,39 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
         <Text style={[styles.goalUnit, { fontSize: sz(12) }]}>pts</Text>
       </View>
       <ProgressBar pct={pct} color="#d4af37" />
+      <View style={styles.goalFlashSlot}>
+        {phase === 'choosing' && pendingChoice ? (
+          <FlashCard
+            msg="Choose the next forced eat"
+            color="#ffcc00"
+            style={[styles.flash, { borderColor: '#ffcc0055', paddingHorizontal: sz(10), paddingVertical: sz(6) }]}
+          />
+        ) : flashMsg ? (
+          <FlashCard
+            key={flashMsg.key}
+            msg={flashMsg.msg}
+            color={flashMsg.color}
+            style={[styles.flash, { borderColor: `${flashMsg.color}55`, paddingHorizontal: sz(10), paddingVertical: sz(6) }]}
+          />
+        ) : null}
+      </View>
     </View>
-  ), [score, pct, sz, level]);
+  ), [score, pct, sz, level, flashMsg, phase, pendingChoice, handleChoiceSelect]);
 
-  const flashNode = useMemo(() => flashMsg ? (
-    <View style={[styles.flash, { borderColor: `${flashMsg.color}55`, paddingHorizontal: sz(22), paddingVertical: sz(9) }]}>
-      <Text style={[styles.flashText, { color: flashMsg.color, fontSize: sz(14) }]}>{flashMsg.msg}</Text>
-    </View>
-  ) : null, [flashMsg, sz]);
+  const instrText = phase === 'animating'
+    ? 'Watch the chain resolve.'
+    : phase === 'choosing'
+    ? 'Drag a blinking predator onto the highlighted prey, or tap a blinking predator to choose it.'
+    : selected
+    ? 'Keep dragging to a highlighted cell, or drag back to cancel.'
+    : 'Drag an animal to an empty cell or directly onto its prey.';
 
-  const instrNode = useMemo(() => (
-    <Text style={[styles.instr, { fontSize: sz(11) }]}>
-      {phase === 'animating'
-        ? 'Watch the chain resolve.'
-        : phase === 'choosing'
-        ? 'Drag a blinking predator onto the highlighted prey, or tap a blinking predator to choose it.'
-        : selected
-        ? 'Keep dragging to a highlighted cell, or drag back to cancel.'
-        : 'Drag an animal to an empty cell or directly onto its prey.'}
-    </Text>
-  ), [phase, selected, sz]);
+  const statusNode = useMemo(() => (
+    <Text style={[styles.instr, { fontSize: sz(11) }]}>{instrText}</Text>
+  ), [instrText, sz]);
+
+  const flashNode = null;
+  const instrNode = null;
 
   const choiceNode = useMemo(() => phase === 'choosing' && pendingChoice ? (
     <View style={[styles.choiceBox, { marginHorizontal: sz(32) }]}>
@@ -561,9 +588,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
               {hintNode}
               {statsNode}
               {goalNode}
-              {instrNode}
-              {flashNode}
-              {choiceNode}
+              {statusNode}
               {ctrlNode}
             </ScrollView>
           </View>
@@ -594,16 +619,32 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
         {hintNode}
         {statsNode}
         {goalNode}
-        {flashNode}
-        {instrNode}
+        {statusNode}
         {gridNode}
-        {choiceNode}
         {ctrlNode}
 
       </ScrollView>
 
       {overlays}
     </SafeAreaView>
+  );
+}
+
+function FlashCard({ msg, color, style }) {
+  const punch = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    punch.setValue(0);
+    Animated.sequence([
+      Animated.timing(punch, { toValue: 1.55, duration: 80, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(punch, { toValue: 0.85, duration: 90, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+      Animated.spring(punch, { toValue: 1, friction: 5, tension: 200, useNativeDriver: true }),
+    ]).start();
+  }, [msg]);
+
+  return (
+    <Animated.View style={[style, { transform: [{ scale: punch }] }]}>
+      <Text style={{ color, fontSize: 13, fontWeight: 'bold' }}>{msg}</Text>
+    </Animated.View>
   );
 }
 
@@ -768,6 +809,7 @@ const styles = StyleSheet.create({
     borderColor: '#6a5224',
     borderWidth: 1,
     borderRadius: 14,
+    position: 'relative',
   },
   goalHeader: {
     flexDirection: 'row',
@@ -790,6 +832,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     marginBottom: 10,
+  },
+  goalFlashSlot: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: '25%',
+    right: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  goalChoiceSlot: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  goalChoiceTitle: {
+    fontSize: 11,
+    color: '#c9a94a',
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  goalChoiceBtn: {
+    backgroundColor: '#fff9ec',
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  goalChoiceBtnText: {
+    fontSize: 11,
+    color: '#5a3e1b',
+    fontWeight: '600',
   },
   goalNow: {
     fontSize: 30,
@@ -840,6 +913,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 12,
     color: '#9a8454',
+  },
+  statusSlot: {
+    alignItems: 'center', justifyContent: 'center', minHeight: 46, marginBottom: 4,
   },
   flash: {
     alignSelf: 'center', backgroundColor: PAPER.card,

@@ -773,6 +773,12 @@ function HowToPlayModal({ visible, onClose }) {
       Visual: ComboVisual,
       notes: ['Combo = total eats in one turn', 'Your best combo is shown in the HUD', 'Some levels require a minimum combo to win'],
     },
+    {
+      title: 'Sequential Eating',
+      body: 'A predator can eat the same type of prey multiple times in one turn — as long as each eat leaves it adjacent to another of the same prey.',
+      Visual: SequentialVisual,
+      notes: ['Same type, different pieces', 'Each eat triggers the next if adjacent', 'Chain multiple prey of the same type for big combos'],
+    },
   ];
 
   const current = STEPS[step];
@@ -1183,6 +1189,99 @@ function ChoiceVisual() {
   );
 }
 
+// ── Slide 7: Sequential eating ───────────────────────────────────────────────
+// Layout: [Fox] [Rabbit] [Rabbit]
+// Step 1: Fox slides right onto center rabbit, eats it
+// Step 2: Fox slides right again onto rightmost rabbit, eats it
+function SequentialVisual() {
+  const foxX   = React.useRef(new Animated.Value(0)).current;
+  const r1Op   = React.useRef(new Animated.Value(1)).current;
+  const r2Op   = React.useRef(new Animated.Value(1)).current;
+  const eat1Sc = React.useRef(new Animated.Value(0)).current;
+  const eat2Sc = React.useRef(new Animated.Value(0)).current;
+  const [foxVariant, setFoxVariant] = React.useState('normal');
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const HOLD = 700;
+    const SLIDE = 350;
+    const FADE = 140;
+    const BETWEEN = 500;
+
+    const delay = (ms) => new Promise((res) => { if (cancelled) res(); else setTimeout(res, ms); });
+    const animate = (val, toValue, duration) =>
+      new Promise((res) => Animated.timing(val, { toValue, duration, useNativeDriver: true }).start(res));
+    const animateSpring = (val, toValue) =>
+      new Promise((res) => Animated.spring(val, { toValue, useNativeDriver: true, tension: 180, friction: 10 }).start(res));
+
+    const run = async () => {
+      while (!cancelled) {
+        // reset
+        foxX.setValue(0);
+        r1Op.setValue(1);
+        r2Op.setValue(1);
+        eat1Sc.setValue(0);
+        eat2Sc.setValue(0);
+        if (!cancelled) setFoxVariant('normal');
+        await delay(HOLD);
+
+        // fox glows, slides right onto center rabbit
+        if (cancelled) break;
+        setFoxVariant('selected');
+        await animate(foxX, CELL_GAP, SLIDE);
+        await Promise.all([
+          animate(r1Op, 0, FADE),
+          animateSpring(eat1Sc, 1),
+        ]);
+        await delay(BETWEEN);
+
+        // fox slides right again, eats rightmost rabbit
+        if (cancelled) break;
+        await animate(foxX, CELL_GAP * 2, SLIDE);
+        await Promise.all([
+          animate(r2Op, 0, FADE),
+          animateSpring(eat2Sc, 1),
+        ]);
+        if (!cancelled) setFoxVariant('normal');
+        await delay(900);
+      }
+    };
+
+    run();
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <View style={{ alignItems: 'center', gap: 10 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 76 }}>
+        {/* Fox — starts left, slides right twice */}
+        <Animated.View style={{ transform: [{ translateX: foxX }] }}>
+          <PieceDemoTile token="F" variant={foxVariant} />
+        </Animated.View>
+        {/* Center rabbit */}
+        <View style={{ width: 56, height: 56, alignItems: 'center', justifyContent: 'center' }}>
+          <Animated.View style={{ opacity: r1Op }}>
+            <PieceDemoTile token="R" variant="prey" />
+          </Animated.View>
+          <Animated.View style={[styles.eatBadge, { transform: [{ scale: eat1Sc }], position: 'absolute', top: -4, right: -6 }]}>
+            <Text style={styles.eatBadgeText}>+3</Text>
+          </Animated.View>
+        </View>
+        {/* Right rabbit */}
+        <View style={{ width: 56, height: 56, alignItems: 'center', justifyContent: 'center' }}>
+          <Animated.View style={{ opacity: r2Op }}>
+            <PieceDemoTile token="R" variant="prey" />
+          </Animated.View>
+          <Animated.View style={[styles.eatBadge, { transform: [{ scale: eat2Sc }], position: 'absolute', top: -4, right: -6 }]}>
+            <Text style={styles.eatBadgeText}>+3</Text>
+          </Animated.View>
+        </View>
+      </View>
+      <Text style={{ color: '#8f9a87', fontSize: 10, textAlign: 'center' }}>Fox eats one rabbit, then eats the next</Text>
+    </View>
+  );
+}
+
 // ── Slide 6: Combo counter ───────────────────────────────────────────────────
 function ComboVisual() {
   const [count, setCount] = React.useState(0);
@@ -1552,6 +1651,8 @@ const styles = StyleSheet.create({
   flowArrowShaftCompact: { width: 16 },
   flowArrowHead: { marginLeft: -1, width: 0, height: 0, borderTopWidth: 6, borderBottomWidth: 6, borderLeftWidth: 8, borderTopColor: 'transparent', borderBottomColor: 'transparent', borderLeftColor: '#4fd04f' },
   chainBadge: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  eatBadge: { backgroundColor: '#4fd04f', borderRadius: 8, paddingHorizontal: 4, paddingVertical: 1 },
+  eatBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
   choicePreview: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14 },
   modalNotes: { marginTop: 18, gap: 6 },
   modalNoteText: { color: '#8f9a87', fontSize: 12, lineHeight: 18 },
