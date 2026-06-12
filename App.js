@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
+import { useFonts } from 'expo-font';
 import AmbientBackground from './src/components/AmbientBackground';
 import MenuScreen from './src/screens/MenuScreen';
 import GameScreen from './src/screens/GameScreen';
@@ -12,6 +13,11 @@ import { useLayout } from './src/hooks/useLayout';
 const PROGRESS_VERSION = 3;
 
 export default function App() {
+  const [fontsLoaded] = useFonts(
+    Platform.OS !== 'web'
+      ? { 'CinzelDecorative-Black': require('./assets/cinzel-decorative-900.ttf') }
+      : {}
+  );
   const { isWide, contentWidth } = useLayout();
   const [screen, setScreen]       = useState('menu');
   const [levelIndex, setLvlIdx]   = useState(0);
@@ -78,6 +84,8 @@ export default function App() {
       setScreen('menu');
     }
   };
+
+  if (Platform.OS !== 'web' && !fontsLoaded) return null;
 
   return (
     <View style={styles.root}>

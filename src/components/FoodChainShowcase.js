@@ -1,273 +1,352 @@
 import React from 'react';
-import {
-  StyleSheet,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  useFrameCallback,
+} from 'react-native-reanimated';
 import HeroCharacter from './HeroCharacter';
 import PieceIcon from './PieceIcon';
 
 const ENTRIES = [
-  { token: 'G', label: 'Grass', accent: '#8ff08c', lat: -0.62, lon: 0.16, size: 0.8 },
-  { token: 'R', label: 'Rabbit', accent: '#ffd7ef', lat: 0.02, lon: 1.14, size: 0.94 },
-  { token: 'F', label: 'Fox', accent: '#ffad57', lat: -0.2, lon: 2.42, size: 1.12 },
-  { token: 'W', label: 'Wolf', accent: '#b9d1ff', lat: 0.04, lon: 3.5, size: 1.04 },
-  { token: 'B', label: 'Bear', accent: '#d6b081', lat: 0.56, lon: 4.6, size: 0.92 },
-  { token: 'D', label: 'Dinosaur', accent: '#a8f1dc', lat: 0.24, lon: 5.62, size: 0.86 },
+  { token: 'G', label: 'Grass',    accent: '#8ff08c', lat: -0.62, lon: 0.16, size: 0.8  },
+  { token: 'R', label: 'Rabbit',   accent: '#ffd7ef', lat:  0.02, lon: 1.14, size: 0.94 },
+  { token: 'F', label: 'Fox',      accent: '#ffad57', lat: -0.2,  lon: 2.42, size: 1.12 },
+  { token: 'W', label: 'Wolf',     accent: '#b9d1ff', lat:  0.04, lon: 3.5,  size: 1.04 },
+  { token: 'B', label: 'Bear',     accent: '#d6b081', lat:  0.56, lon: 4.6,  size: 0.92 },
+  { token: 'D', label: 'Dinosaur', accent: '#a8f1dc', lat:  0.24, lon: 5.62, size: 0.86 },
 ];
 
 const COMET_STREAKS = [
-  { length: 1.2, thickness: 0.04, offset: -0.4, drift: -8, opacity: 0.16 },
-  { length: 1.36, thickness: 0.03, offset: 0.5, drift: 9, opacity: 0.14 },
-  { length: 1.55, thickness: 0.022, offset: 0, drift: 0, opacity: 0.12 },
+  { length: 1.2,  thickness: 0.04,  offset: -0.4, drift: -8, opacity: 0.16 },
+  { length: 1.36, thickness: 0.03,  offset:  0.5, drift:  9, opacity: 0.14 },
+  { length: 1.55, thickness: 0.022, offset:  0,   drift:  0, opacity: 0.12 },
 ];
 
 const ORBIT_RINGS = [
-  { scale: 1.18, height: 0.74, opacity: 0.34, color: 'rgba(178, 236, 226, 0.34)', spin: 0.18, offset: 2 },
-  { scale: 1.36, height: 0.9, opacity: 0.2, color: 'rgba(255, 213, 111, 0.28)', spin: -0.14, offset: -18 },
-  { scale: 1.54, height: 1.04, opacity: 0.16, color: 'rgba(134, 219, 255, 0.24)', spin: 0.1, offset: 32 },
+  { scale: 1.18, height: 0.74, opacity: 0.34, color: 'rgba(178, 236, 226, 0.34)', spin:  0.18, offset:   2 },
+  { scale: 1.36, height: 0.9,  opacity: 0.2,  color: 'rgba(255, 213, 111, 0.28)', spin: -0.14, offset: -18 },
+  { scale: 1.54, height: 1.04, opacity: 0.16, color: 'rgba(134, 219, 255, 0.24)', spin:  0.1,  offset:  32 },
 ];
 
 const ORBIT_SPARKS = [
-  { radius: 1.22, size: 6, phase: 0.18, color: '#fff1b8' },
-  { radius: 1.5, size: 4, phase: 2.36, color: '#b9fff4' },
-  { radius: 1.34, size: 3, phase: 4.44, color: '#fff8df' },
+  { radius: 1.22, size: 6, phase: 0.18, speedMult: 0.90, color: '#fff1b8' },
+  { radius: 1.5,  size: 4, phase: 2.36, speedMult: 1.06, color: '#b9fff4' },
+  { radius: 1.34, size: 3, phase: 4.44, speedMult: 1.22, color: '#fff8df' },
 ];
 
 const GLASS_SPARKLES = [
-  { left: '27%', top: '20%', size: 2, opacity: 0.48 },
+  { left: '27%', top: '20%', size: 2,   opacity: 0.48 },
   { left: '68%', top: '28%', size: 1.5, opacity: 0.32 },
-  { left: '76%', top: '58%', size: 2, opacity: 0.24 },
+  { left: '76%', top: '58%', size: 2,   opacity: 0.24 },
   { left: '34%', top: '72%', size: 1.5, opacity: 0.26 },
 ];
 
 function colorWithAlpha(hex, alpha) {
-  const value = hex.replace('#', '');
-  const r = parseInt(value.slice(0, 2), 16);
-  const g = parseInt(value.slice(2, 4), 16);
-  const b = parseInt(value.slice(4, 6), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
+  const v = hex.replace('#', '');
+  const r = parseInt(v.slice(0, 2), 16);
+  const g = parseInt(v.slice(2, 4), 16);
+  const b = parseInt(v.slice(4, 6), 16);
+  const a = typeof alpha === 'number' ? alpha.toFixed(3) : alpha;
+  return `rgba(${r},${g},${b},${a})`;
 }
 
-// Precomputed constant-alpha variants for each entry accent color.
 const ENTRY_COLORS = {};
-ENTRIES.forEach((entry) => {
-  ENTRY_COLORS[entry.token] = {
-    a0:  colorWithAlpha(entry.accent, 0),
-    a18: colorWithAlpha(entry.accent, 0.18),
-    a38: colorWithAlpha(entry.accent, 0.38),
-    a7:  colorWithAlpha(entry.accent, 0.7),
+ENTRIES.forEach((e) => {
+  ENTRY_COLORS[e.token] = {
+    a0:  colorWithAlpha(e.accent, 0),
+    a18: colorWithAlpha(e.accent, 0.18),
+    a38: colorWithAlpha(e.accent, 0.38),
+    a7:  colorWithAlpha(e.accent, 0.7),
   };
 });
 
-// Pre-parsed "r,g,b" strings for building rgba() in the hot RAF path without parseInt.
 const ENTRY_RGB = {};
-ENTRIES.forEach((entry) => {
-  const v = entry.accent.replace('#', '');
-  ENTRY_RGB[entry.token] = `${parseInt(v.slice(0, 2), 16)},${parseInt(v.slice(2, 4), 16)},${parseInt(v.slice(4, 6), 16)}`;
+ENTRIES.forEach((e) => {
+  const v = e.accent.replace('#', '');
+  ENTRY_RGB[e.token] = `${parseInt(v.slice(0, 2), 16)},${parseInt(v.slice(2, 4), 16)},${parseInt(v.slice(4, 6), 16)}`;
 });
 
-function projectPoint(entry, angle, tilt, radiusX, radiusY) {
-  const lon = entry.lon + angle;
-  const x = Math.cos(entry.lat) * Math.cos(lon);
-  const z = Math.cos(entry.lat) * Math.sin(lon);
-  const y = Math.sin(entry.lat);
-
-  const yTilted = y * Math.cos(tilt) - z * Math.sin(tilt);
-  const zTilted = y * Math.sin(tilt) + z * Math.cos(tilt);
-  const depth = (zTilted + 1) / 2;
-  const perspective = 0.82 + depth * 0.28;
-
-  return {
-    x: x * radiusX * perspective,
-    y: yTilted * radiusY * perspective + depth * radiusY * 0.18,
-    depth,
-    rawX: x,
-    rawY: yTilted,
-    rawZ: zTilted,
-  };
+function projectPoint(lat, lon, angle, tilt, radiusX, radiusY) {
+  'worklet';
+  const l = lon + angle;
+  const x = Math.cos(lat) * Math.cos(l);
+  const z = Math.cos(lat) * Math.sin(l);
+  const y = Math.sin(lat);
+  const yT = y * Math.cos(tilt) - z * Math.sin(tilt);
+  const zT = y * Math.sin(tilt) + z * Math.cos(tilt);
+  const depth = (zT + 1) / 2;
+  const p = 0.82 + depth * 0.28;
+  return { x: x * radiusX * p, y: yT * radiusY * p + depth * radiusY * 0.18, depth, rawX: x, rawY: yT };
 }
 
-// GlassOrb receives refs for imperative transform updates each frame.
-// orbRef → the outer sphere View; plateRef → the character plate View.
-function GlassOrb({ entry, size, yaw, pitch, orbRef, plateRef }) {
-  const depth = entry.point.depth;
-  const characterSize = size * (entry.token === 'G' ? 0.56 : 0.72);
-  const floorWidth = size * 0.7;
-  const floorHeight = size * 0.18;
+// Static orb visual rendered at a fixed size; the animated wrapper scales it.
+function GlassOrb({ entry, size }) {
+  const { lat, lon, accent, token } = entry;
+  const pt = projectPoint(lat, lon, 0, -0.48, 128, 76);
+  const depth = pt.depth;
+  const ec = ENTRY_COLORS[token];
+  const charSize = size * (token === 'G' ? 0.56 : 0.72);
+  const floorW = size * 0.7;
+  const floorH = size * 0.18;
 
   return (
     <View
-      ref={orbRef}
       style={[
         styles.sphere,
         {
           width: size,
           height: size,
           borderRadius: size / 2,
-          borderColor: colorWithAlpha(entry.accent, 0.44 + depth * 0.3),
-          backgroundColor: colorWithAlpha(entry.accent, 0.04 + depth * 0.04),
-          shadowColor: entry.accent,
+          borderColor: colorWithAlpha(accent, 0.44 + depth * 0.3),
+          backgroundColor: colorWithAlpha(accent, 0.04 + depth * 0.04),
+          shadowColor: accent,
           shadowOpacity: 0.22 + depth * 0.34,
           shadowRadius: 14 + depth * 15,
-          transform: [
-            { perspective: 900 },
-            { rotateY: `${yaw}deg` },
-            { rotateX: `${pitch}deg` },
-          ],
         },
       ]}
     >
       <LinearGradient
-        colors={[
-          'rgba(255,255,255,0.38)',
-          ENTRY_COLORS[entry.token].a18,
-          'rgba(105, 194, 211, 0.1)',
-          'rgba(6, 19, 20, 0.34)',
-        ]}
+        colors={['rgba(255,255,255,0.38)', ec.a18, 'rgba(105,194,211,0.1)', 'rgba(6,19,20,0.34)']}
         locations={[0, 0.18, 0.58, 1]}
         start={{ x: 0.14, y: 0.04 }}
         end={{ x: 0.86, y: 0.96 }}
         style={[StyleSheet.absoluteFillObject, { borderRadius: size / 2 }]}
       />
-
-      <View
-        style={[
-          styles.innerShadow,
-          {
-            borderRadius: size / 2,
-            borderColor: colorWithAlpha(entry.accent, 0.2 + depth * 0.14),
-          },
-        ]}
-      />
-
+      <View style={[styles.innerShadow, { borderRadius: size / 2, borderColor: colorWithAlpha(accent, 0.2 + depth * 0.14) }]} />
       <LinearGradient
-        colors={[
-          ENTRY_COLORS[entry.token].a0,
-          ENTRY_COLORS[entry.token].a38,
-          'rgba(255,255,255,0.38)',
-          ENTRY_COLORS[entry.token].a0,
-        ]}
+        colors={[ec.a0, ec.a38, 'rgba(255,255,255,0.38)', ec.a0]}
         locations={[0, 0.42, 0.72, 1]}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
-        style={[
-          styles.orbFloor,
-          {
-            width: floorWidth,
-            height: floorHeight,
-            left: (size - floorWidth) / 2,
-            bottom: size * 0.13,
-            borderRadius: floorHeight,
-          },
-        ]}
+        style={[styles.orbFloor, { width: floorW, height: floorH, left: (size - floorW) / 2, bottom: size * 0.13, borderRadius: floorH }]}
       />
-
       <View
-        ref={plateRef}
         style={[
           styles.characterPlate,
-          {
-            width: characterSize * 1.12,
-            height: characterSize * 1.12,
-            left: (size - characterSize * 1.12) / 2,
-            bottom: size * 0.08,
-            shadowColor: entry.accent,
-            transform: [
-              { perspective: 900 },
-              { rotateY: `${-yaw * 0.55}deg` },
-              { translateY: depth * -2 },
-            ],
-          },
+          { width: charSize * 1.12, height: charSize * 1.12, left: (size - charSize * 1.12) / 2, bottom: size * 0.08, shadowColor: accent },
         ]}
       >
-        {entry.token ? (
-          <HeroCharacter style={styles.dinoAnimation} />
-        ) : (
-          <PieceIcon token={entry.token} size={characterSize} />
-        )}
+        {token === 'D' ? <HeroCharacter style={styles.dinoAnimation} /> : <PieceIcon token={token} size={charSize} />}
       </View>
-
-      {GLASS_SPARKLES.map((sparkle, index) => (
-        <View
-          key={index}
-          style={[
-            styles.glassSparkle,
-            {
-              left: sparkle.left,
-              top: sparkle.top,
-              width: sparkle.size,
-              height: sparkle.size,
-              opacity: sparkle.opacity + depth * 0.16,
-            },
-          ]}
-        />
+      {GLASS_SPARKLES.map((sp, i) => (
+        <View key={i} style={[styles.glassSparkle, { left: sp.left, top: sp.top, width: sp.size, height: sp.size, opacity: sp.opacity + depth * 0.16 }]} />
       ))}
-
       <LinearGradient
         colors={['rgba(255,255,255,0.88)', 'rgba(255,255,255,0.18)', 'rgba(255,255,255,0)']}
         locations={[0, 0.52, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[
-          styles.mainHighlight,
-          {
-            width: size * 0.5,
-            height: size * 0.22,
-            borderRadius: size * 0.25,
-            left: size * 0.14,
-            top: size * 0.1,
-          },
-        ]}
+        style={[styles.mainHighlight, { width: size * 0.5, height: size * 0.22, borderRadius: size * 0.25, left: size * 0.14, top: size * 0.1 }]}
       />
-
       <View
         style={[
           styles.arcHighlight,
-          {
-            width: size * 0.6,
-            height: size * 0.38,
-            left: size * 0.08,
-            top: size * 0.06,
-            borderTopColor: 'rgba(255,255,255,0.62)',
-            borderLeftColor: 'rgba(255,255,255,0.22)',
-          },
+          { width: size * 0.6, height: size * 0.38, left: size * 0.08, top: size * 0.06, borderTopColor: 'rgba(255,255,255,0.62)', borderLeftColor: 'rgba(255,255,255,0.22)' },
         ]}
       />
-
-      <View
-        style={[
-          styles.rim,
-          {
-            borderRadius: size / 2,
-            borderColor: 'rgba(245, 255, 252, 0.34)',
-          },
-        ]}
-      />
-      <View
-        style={[
-          styles.lowerRim,
-          {
-            left: size * 0.16,
-            right: size * 0.16,
-            bottom: size * 0.12,
-            height: size * 0.18,
-            borderBottomColor: colorWithAlpha(entry.accent, 0.44 + depth * 0.24),
-          },
-        ]}
-      />
+      <View style={[styles.rim, { borderRadius: size / 2, borderColor: 'rgba(245,255,252,0.34)' }]} />
+      <View style={[styles.lowerRim, { left: size * 0.16, right: size * 0.16, bottom: size * 0.12, height: size * 0.18, borderBottomColor: colorWithAlpha(accent, 0.44 + depth * 0.24) }]} />
     </View>
   );
 }
 
-function computePositioned(angle, tilt, radiusX, radiusY) {
-  return ENTRIES.map((entry) => ({
-    ...entry,
-    point: projectPoint(entry, angle, tilt, radiusX, radiusY),
-    trailPoint: projectPoint(entry, angle - 0.34, tilt, radiusX, radiusY),
-    tailPoint: projectPoint(entry, angle - 0.66, tilt, radiusX, radiusY),
-  })).sort((a, b) => a.point.depth - b.point.depth);
+// Computes the streak animated style for a single streak spec.
+// Called as a custom hook — always called unconditionally in the same order.
+function useStreakStyle(phase, layoutShared, lat, lon, entrySz, streak) {
+  const sLen = streak.length;
+  const sThk = streak.thickness;
+  const sOff = streak.offset;
+  const sDrift = streak.drift;
+  const sOpacity = streak.opacity;
+  return useAnimatedStyle(() => {
+    'worklet';
+    const { centerX, centerY, radiusX, radiusY } = layoutShared.value;
+    const angle = phase.value * Math.PI * 2;
+    const tilt = -0.48 + Math.sin(phase.value * 1.2) * 0.06;
+    const pt   = projectPoint(lat, lon, angle,        tilt, radiusX, radiusY);
+    const ptT  = projectPoint(lat, lon, angle - 0.34, tilt, radiusX, radiusY);
+    const ptTl = projectPoint(lat, lon, angle - 0.66, tilt, radiusX, radiusY);
+    const sz = (52 + pt.depth * 44) * entrySz;
+    const headX = centerX + pt.x;
+    const headY = centerY + pt.y;
+    const dx = pt.x - ptT.x;
+    const dy = pt.y - ptT.y;
+    const tdx = pt.x - ptTl.x;
+    const tdy = pt.y - ptTl.y;
+    const dirLen = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+    const trailAngle = Math.atan2(dy / dirLen, dx / dirLen) * (180 / Math.PI);
+    const baseLen = Math.max(sz * 1.6, Math.sqrt(tdx * tdx + tdy * tdy) * 2.1);
+    const tLen = baseLen * sLen;
+    const tThk = Math.max(1, sz * sThk);
+    const off = sz * sOff * 0.5;
+    const sAngle = trailAngle + sDrift;
+    const sRad = (sAngle * Math.PI) / 180;
+    const cx = headX - Math.cos(sRad) * tLen * 0.5 + (-Math.sin(sRad)) * off;
+    const cy = headY - Math.sin(sRad) * tLen * 0.5 + Math.cos(sRad) * off;
+    const depthOp = 0.24 + pt.depth * 0.76;
+    return {
+      width: tLen,
+      height: tThk,
+      transform: [{ translateX: cx - tLen / 2 }, { translateY: cy - tThk / 2 }, { rotate: `${sAngle}deg` }],
+      opacity: sOpacity * depthOp,
+      zIndex: Math.round(pt.depth * 100) + 9,
+    };
+  });
+}
+
+function AnimatedOrbEntry({ entry, phase, layoutShared }) {
+  const { lat, lon, size: entrySz, token } = entry;
+  const ec = ENTRY_COLORS[token];
+
+  // Fixed render size for GlassOrb — parent scales it to match the animated depth size.
+  const basePt = projectPoint(lat, lon, 0, -0.48, 128, 76);
+  const baseSize = (52 + basePt.depth * 44) * entrySz;
+
+  // Position: translate so that the element's natural center aligns with the orbit point.
+  const wrapStyle = useAnimatedStyle(() => {
+    'worklet';
+    const { centerX, centerY, radiusX, radiusY } = layoutShared.value;
+    const angle = phase.value * Math.PI * 2;
+    const tilt = -0.48 + Math.sin(phase.value * 1.2) * 0.06;
+    const pt = projectPoint(lat, lon, angle, tilt, radiusX, radiusY);
+    return {
+      transform: [{ translateX: centerX + pt.x - baseSize / 2 }, { translateY: centerY + pt.y - baseSize / 2 }],
+      opacity: Math.min(1, 0.56 + pt.depth * 0.58),
+      zIndex: Math.round(pt.depth * 100) + 10,
+    };
+  });
+
+  // Rotate + scale: GlassOrb stays at baseSize, we scale to match current depth size.
+  const orbStyle = useAnimatedStyle(() => {
+    'worklet';
+    const { radiusX, radiusY } = layoutShared.value;
+    const angle = phase.value * Math.PI * 2;
+    const tilt = -0.48 + Math.sin(phase.value * 1.2) * 0.06;
+    const pt = projectPoint(lat, lon, angle, tilt, radiusX, radiusY);
+    const sz = (52 + pt.depth * 44) * entrySz;
+    const yaw = -pt.rawX * 18 + Math.sin(phase.value * Math.PI * 2 + lon) * 6;
+    const pitch = pt.rawY * 10 - 4;
+    return {
+      transform: [
+        { perspective: 900 },
+        { rotateY: `${yaw}deg` },
+        { rotateX: `${pitch}deg` },
+        { scale: sz / baseSize },
+      ],
+    };
+  });
+
+  const floorStyle = useAnimatedStyle(() => {
+    'worklet';
+    const { centerX, centerY, radiusX, radiusY } = layoutShared.value;
+    const angle = phase.value * Math.PI * 2;
+    const tilt = -0.48 + Math.sin(phase.value * 1.2) * 0.06;
+    const pt = projectPoint(lat, lon, angle, tilt, radiusX, radiusY);
+    const sz = (52 + pt.depth * 44) * entrySz;
+    const headX = centerX + pt.x;
+    const headY = centerY + pt.y;
+    const fw = sz * (0.86 + pt.depth * 0.18);
+    const fh = sz * 0.18;
+    return {
+      width: fw, height: fh, borderRadius: fh,
+      transform: [{ translateX: headX - fw / 2 }, { translateY: headY + sz * 0.36 }],
+      opacity: 0.1 + pt.depth * 0.28,
+      zIndex: Math.round(pt.depth * 100) + 8,
+    };
+  });
+
+  const bloomStyle = useAnimatedStyle(() => {
+    'worklet';
+    const { centerX, centerY, radiusX, radiusY } = layoutShared.value;
+    const angle = phase.value * Math.PI * 2;
+    const tilt = -0.48 + Math.sin(phase.value * 1.2) * 0.06;
+    const pt = projectPoint(lat, lon, angle, tilt, radiusX, radiusY);
+    const sz = (52 + pt.depth * 44) * entrySz;
+    const headX = centerX + pt.x;
+    const headY = centerY + pt.y;
+    const bsz = sz * (1.14 + pt.depth * 0.22);
+    return {
+      width: bsz, height: bsz, borderRadius: bsz / 2,
+      transform: [{ translateX: headX - bsz / 2 }, { translateY: headY - bsz / 2 }],
+      opacity: 0.08 + pt.depth * 0.28,
+      zIndex: Math.round(pt.depth * 100) + 9,
+    };
+  });
+
+  // 3 streak styles — useStreakStyle is a custom hook, called unconditionally in fixed order
+  const s0 = useStreakStyle(phase, layoutShared, lat, lon, entrySz, COMET_STREAKS[0]);
+  const s1 = useStreakStyle(phase, layoutShared, lat, lon, entrySz, COMET_STREAKS[1]);
+  const s2 = useStreakStyle(phase, layoutShared, lat, lon, entrySz, COMET_STREAKS[2]);
+  const streakStyles = [s0, s1, s2];
+
+  return (
+    <>
+      <Animated.View style={[styles.floorShadow, floorStyle]} />
+      <Animated.View style={[styles.headBloom, bloomStyle]} />
+      {COMET_STREAKS.map((_, si) => (
+        <Animated.View key={si} style={[styles.trailWrap, streakStyles[si]]}>
+          <LinearGradient
+            colors={['rgba(255,255,255,0)', ec.a0, ec.a18, ec.a7, 'rgba(255,255,255,0.92)']}
+            locations={[0, 0.5, 0.72, 0.93, 1]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.trailGradient}
+          />
+        </Animated.View>
+      ))}
+      <Animated.View style={[styles.sphereWrap, wrapStyle]}>
+        <Animated.View style={orbStyle}>
+          <GlassOrb entry={entry} size={baseSize} />
+        </Animated.View>
+      </Animated.View>
+    </>
+  );
+}
+
+function AnimatedOrbitRing({ ring, phase, rw, rh, left, top }) {
+  const offset = ring.offset;
+  const spinMult = ring.spin * 360;
+  const animStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      transform: [{ perspective: 1000 }, { rotateX: '64deg' }, { rotateZ: `${offset + phase.value * spinMult}deg` }],
+    };
+  });
+  return (
+    <Animated.View style={[styles.orbitRing, { width: rw, height: rh, left, top, borderColor: ring.color, opacity: ring.opacity }, animStyle]} />
+  );
+}
+
+function AnimatedFrontArc({ ring, phase, rw, rh, left, top }) {
+  const offset = ring.offset + 18;
+  const spinMult = ring.spin * 360;
+  const animStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      transform: [{ perspective: 1000 }, { rotateX: '64deg' }, { rotateZ: `${offset + phase.value * spinMult}deg` }],
+    };
+  });
+  return (
+    <Animated.View style={[styles.frontOrbitArc, { width: rw, height: rh, left, top, borderBottomColor: ring.color, opacity: ring.opacity * 0.8 }, animStyle]} />
+  );
+}
+
+function AnimatedOrbitSpark({ spark, phase, centerX, centerY, radiusX, radiusY }) {
+  const { phase: sparkPhase, speedMult, radius: sparkRadius, size: sparkSize } = spark;
+  const animStyle = useAnimatedStyle(() => {
+    'worklet';
+    const a = phase.value * Math.PI * 2 * speedMult + sparkPhase;
+    const x = centerX + Math.cos(a) * radiusX * sparkRadius;
+    const y = centerY + Math.sin(a) * radiusY * 0.7 * sparkRadius;
+    return {
+      transform: [{ translateX: x - sparkSize / 2 }, { translateY: y - sparkSize / 2 }, { rotate: '45deg' }],
+    };
+  });
+  return (
+    <Animated.View style={[styles.orbitSpark, { width: spark.size, height: spark.size, left: 0, top: 0, backgroundColor: spark.color }, animStyle]} />
+  );
 }
 
 export default function FoodChainShowcase({ active = true, containerWidth }) {
@@ -281,386 +360,39 @@ export default function FoodChainShowcase({ active = true, containerWidth }) {
   const radiusX = Math.min(panelWidth * (isWide ? 0.39 : 0.32), isWide ? 350 : 128);
   const radiusY = Math.min(panelHeight * 0.34, 76);
 
-  // Layout values needed inside the RAF loop — updated each render so resizes are picked up.
-  const layoutRef = React.useRef({ centerX, centerY, radiusX, radiusY });
-  layoutRef.current = { centerX, centerY, radiusX, radiusY };
+  const phase = useSharedValue(0);
+  const isActive = useSharedValue(active);
+  isActive.value = active;
 
-  const activeRef = React.useRef(active);
-  activeRef.current = active;
+  const layoutShared = useSharedValue({ centerX, centerY, radiusX, radiusY });
+  layoutShared.value = { centerX, centerY, radiusX, radiusY };
 
-  // DOM element refs — populated via ref callbacks in JSX, consumed in RAF loop.
-  const orbitRingEls = React.useRef([null, null, null]);
-  const frontArcEls = React.useRef([null, null]);
-  const sparkEls = React.useRef([null, null, null]);
-  const entryEls = React.useRef(
-    Object.fromEntries(
-      ENTRIES.map((e) => [
-        e.token,
-        { wrap: null, orb: null, plate: null, floor: null, bloom: null, streaks: [null, null, null] },
-      ])
-    )
-  );
-
-  React.useEffect(() => {
-    let frame;
-    const start = Date.now();
-    let offset = 0;
-    let pauseStart = 0;
-
-    const tick = () => {
-      if (activeRef.current) {
-        if (pauseStart > 0) {
-          offset += Date.now() - pauseStart;
-          pauseStart = 0;
-        }
-        const elapsed = (Date.now() - start - offset) / 1000;
-        const phase = elapsed * 0.115;
-        const { centerX: cx, centerY: cy, radiusX: rx, radiusY: ry } = layoutRef.current;
-        const angle = phase * Math.PI * 2;
-        const tilt = -0.48 + Math.sin(phase * 1.2) * 0.06;
-
-        // Orbit rings
-        ORBIT_RINGS.forEach((ring, i) => {
-          const el = orbitRingEls.current[i];
-          if (!el) return;
-          const rotation = ring.offset + phase * 360 * ring.spin;
-          el.style.transform = `perspective(1000px) rotateX(64deg) rotateZ(${rotation}deg)`;
-        });
-
-        // Front orbit arcs
-        ORBIT_RINGS.slice(0, 2).forEach((ring, i) => {
-          const el = frontArcEls.current[i];
-          if (!el) return;
-          const rotation = ring.offset + 18 + phase * 360 * ring.spin;
-          el.style.transform = `perspective(1000px) rotateX(64deg) rotateZ(${rotation}deg)`;
-        });
-
-        // Orbit sparks
-        ORBIT_SPARKS.forEach((spark, i) => {
-          const el = sparkEls.current[i];
-          if (!el) return;
-          const sparkAngle = angle * (0.9 + i * 0.16) + spark.phase;
-          const x = cx + Math.cos(sparkAngle) * rx * spark.radius;
-          const y = cy + Math.sin(sparkAngle) * ry * 0.7 * spark.radius;
-          el.style.transform = `translateX(${x - spark.size / 2}px) translateY(${y - spark.size / 2}px) rotate(45deg)`;
-        });
-
-        // Entries
-        const positioned = computePositioned(angle, tilt, rx, ry);
-        positioned.forEach((entry) => {
-          const els = entryEls.current[entry.token];
-          if (!els) return;
-          const { point, trailPoint, tailPoint } = entry;
-          const size = (52 + point.depth * 44) * entry.size;
-          const left = cx + point.x - size / 2;
-          const top = cy + point.y - size / 2;
-          const headX = cx + point.x;
-          const headY = cy + point.y;
-          const zIndex = Math.round(point.depth * 100) + 10;
-          const depthOpacity = 0.24 + point.depth * 0.76;
-
-          if (els.wrap) {
-            els.wrap.style.transform = `translateX(${left}px) translateY(${top}px)`;
-            els.wrap.style.width = `${size}px`;
-            els.wrap.style.height = `${size}px`;
-            els.wrap.style.opacity = `${Math.min(1, 0.56 + point.depth * 0.58)}`;
-            els.wrap.style.zIndex = `${zIndex}`;
-          }
-
-          if (els.orb) {
-            const yaw = -point.rawX * 18 + Math.sin(phase * Math.PI * 2 + entry.lon) * 6;
-            const pitch = point.rawY * 10 - 4;
-            els.orb.style.transform = `perspective(900px) rotateY(${yaw}deg) rotateX(${pitch}deg)`;
-            els.orb.style.width = `${size}px`;
-            els.orb.style.height = `${size}px`;
-            els.orb.style.borderRadius = `${size / 2}px`;
-            els.orb.style.borderColor = `rgba(${ENTRY_RGB[entry.token]},${(0.44 + point.depth * 0.3).toFixed(3)})`;
-            els.orb.style.backgroundColor = `rgba(${ENTRY_RGB[entry.token]},${(0.04 + point.depth * 0.04).toFixed(3)})`;
-          }
-
-          if (els.plate) {
-            const yaw = -point.rawX * 18 + Math.sin(phase * Math.PI * 2 + entry.lon) * 6;
-            els.plate.style.transform = `perspective(900px) rotateY(${-yaw * 0.55}deg) translateY(${point.depth * -2}px)`;
-          }
-
-          if (els.floor) {
-            const floorShadowWidth = size * (0.86 + point.depth * 0.18);
-            const floorShadowHeight = size * 0.18;
-            els.floor.style.width = `${floorShadowWidth}px`;
-            els.floor.style.height = `${floorShadowHeight}px`;
-            els.floor.style.borderRadius = `${floorShadowHeight}px`;
-            els.floor.style.transform = `translateX(${headX - floorShadowWidth / 2}px) translateY(${headY + size * 0.36}px)`;
-            els.floor.style.opacity = `${0.1 + point.depth * 0.28}`;
-            els.floor.style.zIndex = `${zIndex - 2}`;
-          }
-
-          if (els.bloom) {
-            const headBloomSize = size * (1.14 + point.depth * 0.22);
-            els.bloom.style.width = `${headBloomSize}px`;
-            els.bloom.style.height = `${headBloomSize}px`;
-            els.bloom.style.borderRadius = `${headBloomSize / 2}px`;
-            els.bloom.style.transform = `translateX(${headX - headBloomSize / 2}px) translateY(${headY - headBloomSize / 2}px)`;
-            els.bloom.style.opacity = `${0.08 + point.depth * 0.28}`;
-            els.bloom.style.zIndex = `${zIndex - 1}`;
-          }
-
-          const trailDx = point.x - trailPoint.x;
-          const trailDy = point.y - trailPoint.y;
-          const tailDx = point.x - tailPoint.x;
-          const tailDy = point.y - tailPoint.y;
-          const dirLen = Math.max(1, Math.hypot(trailDx, trailDy));
-          const unitX = trailDx / dirLen;
-          const unitY = trailDy / dirLen;
-          const trailAngleDeg = Math.atan2(unitY, unitX) * (180 / Math.PI);
-          const baseLength = Math.max(size * 1.6, Math.hypot(tailDx, tailDy) * 2.1);
-
-          COMET_STREAKS.forEach((streak, si) => {
-            const el = els.streaks[si];
-            if (!el) return;
-            const trailLength = baseLength * streak.length;
-            const trailThickness = size * streak.thickness;
-            const off = size * streak.offset * 0.5;
-            const streakAngleDeg = trailAngleDeg + streak.drift;
-            const driftRad = (streakAngleDeg * Math.PI) / 180;
-            const driftX = Math.cos(driftRad);
-            const driftY = Math.sin(driftRad);
-            const trailCenterX = headX - driftX * trailLength * 0.5 + (-driftY) * off;
-            const trailCenterY = headY - driftY * trailLength * 0.5 + driftX * off;
-            el.style.width = `${trailLength}px`;
-            el.style.height = `${trailThickness}px`;
-            el.style.transform = `translateX(${trailCenterX - trailLength / 2}px) translateY(${trailCenterY - trailThickness / 2}px) rotate(${streakAngleDeg}deg)`;
-            el.style.opacity = `${streak.opacity * depthOpacity}`;
-            el.style.zIndex = `${zIndex - 1}`;
-          });
-        });
-      } else if (pauseStart === 0) {
-        pauseStart = Date.now();
-      }
-      frame = requestAnimationFrame(tick);
-    };
-
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
-  // Compute initial positions at phase=0 for the first (and only) React render.
-  const initialPositioned = computePositioned(0, -0.48, radiusX, radiusY);
+  useFrameCallback((info) => {
+    'worklet';
+    if (!isActive.value) return;
+    phase.value += ((info.timeSincePreviousFrame ?? 16) / 1000) * 0.115;
+  });
 
   return (
     <View style={[styles.shell, { width: panelWidth, height: panelHeight }]}>
-      {ORBIT_RINGS.map((ring, index) => {
-        const ringWidth = radiusX * 2 * ring.scale;
-        const ringHeight = radiusY * 2 * ring.height;
-        return (
-          <View
-            key={index}
-            ref={(el) => { orbitRingEls.current[index] = el; }}
-            style={[
-              styles.orbitRing,
-              {
-                width: ringWidth,
-                height: ringHeight,
-                left: centerX - ringWidth / 2,
-                top: centerY - ringHeight / 2,
-                borderColor: ring.color,
-                opacity: ring.opacity,
-                transform: [
-                  { perspective: 1000 },
-                  { rotateX: '64deg' },
-                  { rotateZ: `${ring.offset}deg` },
-                ],
-              },
-            ]}
-          />
-        );
+      {ORBIT_RINGS.map((ring, i) => {
+        const rw = radiusX * 2 * ring.scale;
+        const rh = radiusY * 2 * ring.height;
+        return <AnimatedOrbitRing key={i} ring={ring} phase={phase} rw={rw} rh={rh} left={centerX - rw / 2} top={centerY - rh / 2} />;
       })}
 
-      {ORBIT_SPARKS.map((spark, index) => {
-        const sparkAngle = spark.phase;
-        const x = centerX + Math.cos(sparkAngle) * radiusX * spark.radius;
-        const y = centerY + Math.sin(sparkAngle) * radiusY * 0.7 * spark.radius;
-        return (
-          <View
-            key={index}
-            ref={(el) => { sparkEls.current[index] = el; }}
-            style={[
-              styles.orbitSpark,
-              {
-                width: spark.size,
-                height: spark.size,
-                left: 0,
-                top: 0,
-                backgroundColor: spark.color,
-                transform: [
-                  { translateX: x - spark.size / 2 },
-                  { translateY: y - spark.size / 2 },
-                  { rotate: '45deg' },
-                ],
-              },
-            ]}
-          />
-        );
-      })}
+      {ORBIT_SPARKS.map((spark, i) => (
+        <AnimatedOrbitSpark key={i} spark={spark} phase={phase} centerX={centerX} centerY={centerY} radiusX={radiusX} radiusY={radiusY} />
+      ))}
 
-      {initialPositioned.map((entry) => {
-        const { point, trailPoint, tailPoint } = entry;
-        const size = (52 + point.depth * 44) * entry.size;
-        const left = centerX + point.x - size / 2;
-        const top = centerY + point.y - size / 2;
-        const headX = centerX + point.x;
-        const headY = centerY + point.y;
-        const trailDx = point.x - trailPoint.x;
-        const trailDy = point.y - trailPoint.y;
-        const tailDx = point.x - tailPoint.x;
-        const tailDy = point.y - tailPoint.y;
-        const dirLen = Math.max(1, Math.hypot(trailDx, trailDy));
-        const unitX = trailDx / dirLen;
-        const unitY = trailDy / dirLen;
-        const trailAngleDeg = Math.atan2(unitY, unitX) * (180 / Math.PI);
-        const baseLength = Math.max(size * 1.6, Math.hypot(tailDx, tailDy) * 2.1);
-        const headBloomSize = size * (1.14 + point.depth * 0.22);
-        const depthOpacity = 0.24 + point.depth * 0.76;
-        const zIndex = Math.round(point.depth * 100) + 10;
-        const floorShadowWidth = size * (0.86 + point.depth * 0.18);
-        const floorShadowHeight = size * 0.18;
-        const yaw = -point.rawX * 18 + Math.sin(entry.lon) * 6;
-        const pitch = point.rawY * 10 - 4;
+      {ENTRIES.map((entry) => (
+        <AnimatedOrbEntry key={entry.token} entry={entry} phase={phase} layoutShared={layoutShared} />
+      ))}
 
-        return (
-          <React.Fragment key={entry.token}>
-            <View
-              ref={(el) => { entryEls.current[entry.token].floor = el; }}
-              style={[
-                styles.floorShadow,
-                {
-                  width: floorShadowWidth,
-                  height: floorShadowHeight,
-                  borderRadius: floorShadowHeight,
-                  left: 0,
-                  top: 0,
-                  transform: [{ translateX: headX - floorShadowWidth / 2 }, { translateY: headY + size * 0.36 }],
-                  opacity: 0.1 + point.depth * 0.28,
-                  zIndex: zIndex - 2,
-                },
-              ]}
-            />
-            <View
-              ref={(el) => { entryEls.current[entry.token].bloom = el; }}
-              style={[
-                styles.headBloom,
-                {
-                  width: headBloomSize,
-                  height: headBloomSize,
-                  borderRadius: headBloomSize / 2,
-                  left: 0,
-                  top: 0,
-                  transform: [{ translateX: headX - headBloomSize / 2 }, { translateY: headY - headBloomSize / 2 }],
-                  opacity: 0.08 + point.depth * 0.28,
-                  zIndex: zIndex - 1,
-                },
-              ]}
-            />
-            {COMET_STREAKS.map((streak, streakIndex) => {
-              const trailLength = baseLength * streak.length;
-              const trailThickness = size * streak.thickness;
-              const off = size * streak.offset * 0.5;
-              const streakAngleDeg = trailAngleDeg + streak.drift;
-              const driftRad = (streakAngleDeg * Math.PI) / 180;
-              const driftX = Math.cos(driftRad);
-              const driftY = Math.sin(driftRad);
-              const trailCenterX = headX - driftX * trailLength * 0.5 + (-driftY) * off;
-              const trailCenterY = headY - driftY * trailLength * 0.5 + driftX * off;
-
-              return (
-                <View
-                  key={streakIndex}
-                  ref={(el) => { entryEls.current[entry.token].streaks[streakIndex] = el; }}
-                  style={[
-                    styles.trailWrap,
-                    {
-                      width: trailLength,
-                      height: trailThickness,
-                      left: 0,
-                      top: 0,
-                      transform: [
-                        { translateX: trailCenterX - trailLength / 2 },
-                        { translateY: trailCenterY - trailThickness / 2 },
-                        { rotate: `${streakAngleDeg}deg` },
-                      ],
-                      opacity: streak.opacity * depthOpacity,
-                      zIndex: zIndex - 1,
-                    },
-                  ]}
-                >
-                  <LinearGradient
-                    colors={[
-                      'rgba(255,255,255,0)',
-                      ENTRY_COLORS[entry.token].a0,
-                      ENTRY_COLORS[entry.token].a18,
-                      ENTRY_COLORS[entry.token].a7,
-                      'rgba(255,255,255,0.92)',
-                    ]}
-                    locations={[0, 0.5, 0.72, 0.93, 1]}
-                    start={{ x: 0, y: 0.5 }}
-                    end={{ x: 1, y: 0.5 }}
-                    style={styles.trailGradient}
-                  />
-                </View>
-              );
-            })}
-            <View
-              ref={(el) => { entryEls.current[entry.token].wrap = el; }}
-              style={[
-                styles.sphereWrap,
-                {
-                  width: size,
-                  height: size,
-                  left: 0,
-                  top: 0,
-                  transform: [{ translateX: left }, { translateY: top }],
-                  opacity: Math.min(1, 0.56 + point.depth * 0.58),
-                  zIndex,
-                },
-              ]}
-            >
-              <GlassOrb
-                entry={entry}
-                size={size}
-                yaw={yaw}
-                pitch={pitch}
-                orbRef={(el) => { entryEls.current[entry.token].orb = el; }}
-                plateRef={(el) => { entryEls.current[entry.token].plate = el; }}
-              />
-            </View>
-          </React.Fragment>
-        );
-      })}
-
-      {ORBIT_RINGS.slice(0, 2).map((ring, index) => {
-        const ringWidth = radiusX * 2 * (ring.scale + 0.04);
-        const ringHeight = radiusY * 2 * (ring.height + 0.04);
-        return (
-          <View
-            key={index}
-            ref={(el) => { frontArcEls.current[index] = el; }}
-            style={[
-              styles.frontOrbitArc,
-              {
-                width: ringWidth,
-                height: ringHeight,
-                left: centerX - ringWidth / 2,
-                top: centerY - ringHeight / 2,
-                borderBottomColor: ring.color,
-                opacity: ring.opacity * 0.8,
-                transform: [
-                  { perspective: 1000 },
-                  { rotateX: '64deg' },
-                  { rotateZ: `${ring.offset + 18}deg` },
-                ],
-              },
-            ]}
-          />
-        );
+      {ORBIT_RINGS.slice(0, 2).map((ring, i) => {
+        const rw = radiusX * 2 * (ring.scale + 0.04);
+        const rh = radiusY * 2 * (ring.height + 0.04);
+        return <AnimatedFrontArc key={i} ring={ring} phase={phase} rw={rw} rh={rh} left={centerX - rw / 2} top={centerY - rh / 2} />;
       })}
     </View>
   );
@@ -690,15 +422,11 @@ const styles = StyleSheet.create({
   },
   floorShadow: {
     position: 'absolute',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    shadowOpacity: 0,
-    shadowRadius: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   headBloom: {
     position: 'absolute',
     backgroundColor: 'rgba(255,255,255,0.1)',
-    shadowOpacity: 0,
-    shadowRadius: 0,
   },
   trailWrap: {
     position: 'absolute',
@@ -714,7 +442,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   sphere: {
-    position: 'absolute',
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
@@ -763,18 +490,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1.4,
     borderRadius: 999,
     opacity: 0.82,
-  },
-  bearAnimation: {
-    width: '130%',
-    height: '130%',
-  },
-  grassAnimation: {
-    width: '310%',
-    height: '310%',
-  },
-  wolfAnimation: {
-    width: '147%',
-    height: '147%',
   },
   dinoAnimation: {
     width: '97%',

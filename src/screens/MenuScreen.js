@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useLayout } from '../hooks/useLayout';
 import { LinearGradient } from 'expo-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
 import { LEVELS, TIER_META } from '../game/levels';
 import { PAL, PIECE_IMAGES } from '../game/constants';
 import PieceIcon from '../components/PieceIcon';
@@ -567,8 +568,20 @@ function TrophicHeroBrand({ wide = false, scale = 1 }) {
 
   const dropAnim = React.useRef(new Animated.Value(0)).current;
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
+  const flowAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
+    if (Platform.OS !== 'web') {
+      Animated.loop(
+        Animated.timing(flowAnim, {
+          toValue: 1,
+          duration: 4000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+    }
+
     if (Platform.OS === 'web') {
       const styleId = 'trophic-rainbow-style';
       let el = document.getElementById(styleId);
@@ -618,6 +631,12 @@ function TrophicHeroBrand({ wide = false, scale = 1 }) {
     outputRange: [-titleFontSize * 1.5, 0],
   });
 
+  const gradientWidth = titleFontSize * 6.5;
+  const flowTranslateX = flowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -gradientWidth * 2],
+  });
+
   return (
     <View style={[styles.heroBrand, wide && styles.heroBrandWide, { height: sz(140), paddingHorizontal: sz(16), paddingTop: sz(8), marginBottom: sz(10) }]}>
       {HERO_STARS.map((star, index) => (
@@ -635,22 +654,66 @@ function TrophicHeroBrand({ wide = false, scale = 1 }) {
           ]}
         />
       ))}
-      <Animated.Text
-        nativeID="trophic-title"
-        numberOfLines={1}
-        style={[
-          styles.title,
-          wide && styles.titleWide,
-          {
-            fontSize: titleFontSize,
-            lineHeight: Math.round(titleFontSize * 1.19),
-            opacity: opacityAnim,
-            transform: [{ translateY }],
-          },
-        ]}
-      >
-        TROPHIC
-      </Animated.Text>
+      {Platform.OS === 'web' ? (
+        <Animated.Text
+          nativeID="trophic-title"
+          numberOfLines={1}
+          style={[
+            styles.title,
+            wide && styles.titleWide,
+            {
+              fontSize: titleFontSize,
+              lineHeight: Math.round(titleFontSize * 1.19),
+              opacity: opacityAnim,
+              transform: [{ translateY }],
+            },
+          ]}
+        >
+          TROPHIC
+        </Animated.Text>
+      ) : (
+        <Animated.View style={{ opacity: opacityAnim, transform: [{ translateY }] }}>
+          <View style={{ width: gradientWidth, height: Math.round(titleFontSize * 1.19), overflow: 'hidden' }}>
+            <MaskedView
+              style={{ width: gradientWidth, height: Math.round(titleFontSize * 1.19) }}
+              maskElement={
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.title,
+                    wide && styles.titleWide,
+                    {
+                      fontSize: titleFontSize,
+                      lineHeight: Math.round(titleFontSize * 1.19),
+                      color: '#000',
+                      width: gradientWidth,
+                    },
+                  ]}
+                >
+                  TROPHIC
+                </Text>
+              }
+            >
+              <Animated.View style={{ transform: [{ translateX: flowTranslateX }] }}>
+                <LinearGradient
+                  colors={[
+                    'hsl(102,95%,65%)', 'hsl(153,95%,65%)', 'hsl(204,95%,65%)',
+                    'hsl(255,95%,65%)', 'hsl(306,95%,65%)', 'hsl(0,95%,65%)',
+                    'hsl(51,95%,65%)',  'hsl(102,95%,65%)', 'hsl(153,95%,65%)',
+                    'hsl(204,95%,65%)', 'hsl(255,95%,65%)',
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={{
+                    height: Math.round(titleFontSize * 1.19),
+                    width: gradientWidth * 3,
+                  }}
+                />
+              </Animated.View>
+            </MaskedView>
+          </View>
+        </Animated.View>
+      )}
       <Text style={[styles.subtitle, wide && styles.subtitleWide, { fontSize: Math.round(titleFontSize * 0.2), marginTop: sz(10) }]}>CHAIN OF NATURE</Text>
     </View>
   );
@@ -1242,13 +1305,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 64,
     fontWeight: '900',
-    ...(Platform.OS !== 'web' && { color: '#e8e4d9' }),
+    ...(Platform.OS === 'web' && { color: '#e8e4d9' }),
     letterSpacing: 4,
     lineHeight: 76,
     fontFamily: Platform.select({
       web: 'Cinzel Decorative, Georgia, serif',
-      ios: 'Georgia',
-      android: 'serif',
+      ios: 'CinzelDecorative-Black',
+      android: 'CinzelDecorative-Black',
       default: 'Georgia',
     }),
     ...(Platform.OS !== 'web' && {

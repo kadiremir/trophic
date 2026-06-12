@@ -36,6 +36,7 @@ Generation strategy
 from __future__ import annotations
 import argparse
 import json
+import multiprocessing
 import os
 import random
 import sys
@@ -682,6 +683,19 @@ def _print_level_table(levels: list[dict], label: str) -> None:
         )
 
 
+# ── Parallel worker ────────────────────────────────────────────────────────────
+
+def _generate_level_worker(args: tuple[int, int]) -> Optional[dict]:
+    """
+    Top-level function required by multiprocessing.Pool (must be picklable).
+    Each level gets its own RNG seeded deterministically from the main seed so
+    parallel workers never share state and results are reproducible.
+    """
+    level_index, seed = args
+    rng = random.Random(seed)
+    return generate_level(level_index, rng)
+
+
 # ── CLI ────────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -700,26 +714,43 @@ def main() -> None:
         _run_validation(out_path)
         return
 
-    rng    = random.Random(args.seed)
-    levels = []
+    # Derive a unique, deterministic seed per level so parallel workers never
+    # share RNG state.  Multiplying by a large prime spreads the seeds far apart
+    # in the RNG sequence space and avoids accidental collisions.
+    worker_args = [(i, args.seed * 2_654_435_761 + i) for i in range(TOTAL_LEVELS)]
 
-    print(f'\nGenerating {TOTAL_LEVELS} levels  (seed={args.seed})\n')
+    n_workers = min(TOTAL_LEVELS, multiprocessing.cpu_count())
+    print(f'\nGenerating {TOTAL_LEVELS} levels  (seed={args.seed}, workers={n_workers})\n')
+
     _print_table_header('Slot')
+    results = [None] * TOTAL_LEVELS
+    completed = 0
 
-    for i in range(TOTAL_LEVELS):
-        print(f'{i + 1:4d}  ', end='', flush=True)
-        lv = generate_level(i, rng)
+    with multiprocessing.Pool(processes=n_workers) as pool:
+        for lv in pool.imap_unordered(_generate_level_worker, worker_args):
+            completed += 1
+            slot = lv['id'] if lv is not None else '?'
+            if lv is None:
+                print(f'  ??  FAILED')
+            else:
+                m = lv['meta']
+                i = lv['id'] - 1
+                results[i] = lv
+                print(
+                    f'  {lv["id"]:2d}  '
+                    f'{m["difficulty"]:6.1f}  {m["target_difficulty"]:6d}  '
+                    f'{m["min_moves"]:5d}  {lv["moves"]:6d}  '
+                    f'{m["solution_count"]:4d}  {m["max_cascade_depth"]:4d}  '
+                    f'{m["agency_ratio"]:5.2f}  {m["mean_pairwise_distance"]:5.2f}  '
+                    f'{m["first_move_branching_factor"]:4d}',
+                    flush=True,
+                )
+
+    levels = []
+    for i, lv in enumerate(results):
         if lv is None:
-            print('FAILED — cannot continue.')
+            print(f'  Level {i + 1} FAILED — cannot continue.')
             sys.exit(1)
-        m = lv['meta']
-        print(
-            f'{m["difficulty"]:6.1f}  {m["target_difficulty"]:6d}  '
-            f'{m["min_moves"]:5d}  {lv["moves"]:6d}  '
-            f'{m["solution_count"]:4d}  {m["max_cascade_depth"]:4d}  '
-            f'{m["agency_ratio"]:5.2f}  {m["mean_pairwise_distance"]:5.2f}  '
-            f'{m["first_move_branching_factor"]:4d}'
-        )
         levels.append(lv)
 
     levels = _order_levels_by_difficulty(levels)
