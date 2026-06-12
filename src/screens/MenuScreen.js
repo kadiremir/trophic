@@ -46,7 +46,7 @@ function apexTokenForTier(chain) {
   return tokens[tokens.length - 1] || 'F';
 }
 
-export default function MenuScreen({ unlocked, completed, onSelect, active = true }) {
+export default function MenuScreen({ unlocked, completed, onSelect, active = true, authButton }) {
   const { isWide, scale, contentWidth } = useLayout();
   const sz = React.useCallback((n) => Math.round(n * scale), [scale]);
   const [showHowToPlay, setShowHowToPlay] = React.useState(false);
@@ -186,6 +186,11 @@ export default function MenuScreen({ unlocked, completed, onSelect, active = tru
         contentContainerStyle={[styles.content, { maxWidth: contentWidth }]}
         showsVerticalScrollIndicator={false}
       >
+        {authButton && (
+          <View style={{ alignItems: 'flex-end', paddingHorizontal: sz(16), paddingTop: sz(8) }}>
+            {authButton}
+          </View>
+        )}
         <View style={[styles.hero, { paddingBottom: sz(24), paddingHorizontal: sz(32) }]}>
           <TrophicHeroBrand scale={scale} />
           <FoodChainShowcase active={active} containerWidth={contentWidth} />

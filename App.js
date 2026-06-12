@@ -91,11 +91,6 @@ export default function App() {
     <View style={styles.root}>
       <AmbientBackground />
       <View style={[styles.appShell, { maxWidth: contentWidth }]}>
-        <View style={styles.topChrome}>
-          <View style={styles.authBar}>
-            <AuthButton user={user ?? null} />
-          </View>
-        </View>
         <View style={styles.screenLayer}>
           <View style={screen !== 'menu' ? styles.hidden : styles.fill} pointerEvents={screen !== 'menu' ? 'none' : 'auto'}>
             <MenuScreen
@@ -103,6 +98,7 @@ export default function App() {
               completed={completed}
               onSelect={handleSelect}
               active={screen === 'menu'}
+              authButton={<AuthButton user={user ?? null} />}
             />
           </View>
           {screen === 'game' && (
@@ -129,19 +125,6 @@ const styles = StyleSheet.create({
   },
   appShellWide: {
     maxWidth: '100%',
-  },
-  topChrome: {
-    width: '100%',
-    minHeight: Platform.select({ web: 52, default: 48 }),
-    paddingTop: Platform.select({ web: 6, default: 6 }),
-    paddingHorizontal: 16,
-    justifyContent: 'flex-start',
-    alignItems: 'flex-end',
-    zIndex: 100,
-  },
-  authBar: {
-    maxWidth: '100%',
-    marginTop: Platform.select({ web: 12, default: 8 }),
   },
   screenLayer: { flex: 1, width: '100%' },
   fill: { flex: 1, width: '100%' },
