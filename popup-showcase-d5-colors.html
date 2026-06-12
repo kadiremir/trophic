@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#5 Badge — Color Varieties</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #111118;
+    color: #fff;
+    padding: 40px 20px 80px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 26px;
+    font-weight: 800;
+    margin-bottom: 6px;
+    letter-spacing: -0.5px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #555;
+    font-size: 13px;
+    margin-bottom: 56px;
+  }
+
+  /* Gallery grid: 2-up columns each holding a fail+win pair */
+  .gallery {
+    display: flex;
+    flex-direction: column;
+    gap: 64px;
+    align-items: center;
+  }
+
+  .variety {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .variety-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: #444;
+  }
+  .variety-label span { color: #7c6af7; margin-right: 6px; }
+
+  .pair {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .card-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .state-lbl {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    opacity: 0.35;
+  }
+
+  /* ── Base card ── */
+  .card {
+    width: 220px;
+    border-radius: 24px;
+    padding: 26px 22px 22px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .level-tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+
+  /* Badge circle */
+  .badge {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 18px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .badge::before {
+    content: '';
+    position: absolute;
+    inset: -7px;
+    border-radius: 50%;
+    border: 2.5px dashed;
+    opacity: 0.35;
+  }
+
+  .badge-icon   { font-size: 28px; margin-bottom: 1px; line-height: 1; }
+  .badge-word   { font-size: 13px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; line-height: 1; }
+  .badge-score  { font-size: 20px; font-weight: 900; line-height: 1.1; }
+
+  .card-title   { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+  .card-sub     { font-size: 12px; margin-bottom: 5px; }
+  .card-moves   { font-size: 12px; margin-bottom: 18px; }
+  .card-moves strong { font-weight: 700; }
+
+  .btns { display: flex; flex-direction: column; gap: 7px; width: 100%; }
+  .btn-p, .btn-s {
+    padding: 12px;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    width: 100%;
+  }
+
+  /* divider */
+  hr { border: none; border-top: 1px solid #1e1e2e; }
+
+
+  /* ════════════════════════════════════════
+     V1 — ORIGINAL (reference)
+  ════════════════════════════════════════ */
+  .v1-fail-card  { background: #fff; box-shadow: 0 12px 40px rgba(0,0,0,.18); }
+  .v1-fail-level { color: #ccc; }
+  .v1-fail-badge { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+  .v1-fail-badge::before { border-color: #c0392b; }
+  .v1-fail-badge * { color: #fff; }
+  .v1-fail-title { color: #333; }
+  .v1-fail-sub   { color: #aaa; }
+  .v1-fail-moves { color: #bbb; }
+  .v1-fail-moves strong { color: #555; }
+  .v1-fail-bp    { background: #c0392b; color: #fff; }
+  .v1-fail-bs    { background: #f5f5f5; color: #888; }
+
+  .v1-win-card   { background: #fff; box-shadow: 0 12px 40px rgba(0,0,0,.18); }
+  .v1-win-level  { color: #ccc; }
+  .v1-win-badge  { background: linear-gradient(135deg, #f9ca24, #f0932b); }
+  .v1-win-badge::before { border-color: #f0932b; }
+  .v1-win-badge * { color: #fff; }
+  .v1-win-title  { color: #333; }
+  .v1-win-sub    { color: #aaa; }
+  .v1-win-moves  { color: #bbb; }
+  .v1-win-moves strong { color: #555; }
+  .v1-win-bp     { background: #f0932b; color: #fff; }
+  .v1-win-bs     { background: #f5f5f5; color: #888; }
+
+
+  /* ════════════════════════════════════════
+     V2 — DARK NOIR (charcoal card, silver badge)
+  ════════════════════════════════════════ */
+  .v2-fail-card  { background: #1a1a1a; box-shadow: 0 12px 40px rgba(0,0,0,.5); }
+  .v2-fail-level { color: #444; }
+  .v2-fail-badge { background: linear-gradient(135deg, #3a3a3a, #222); border: 1.5px solid #555; }
+  .v2-fail-badge::before { border-color: #ff4444; }
+  .v2-fail-badge .badge-icon  { color: #ff4444; }
+  .v2-fail-badge .badge-word  { color: #ff6666; }
+  .v2-fail-badge .badge-score { color: #fff; }
+  .v2-fail-title { color: #eee; }
+  .v2-fail-sub   { color: #555; }
+  .v2-fail-moves { color: #444; }
+  .v2-fail-moves strong { color: #999; }
+  .v2-fail-bp    { background: #ff3333; color: #fff; }
+  .v2-fail-bs    { background: #252525; color: #555; }
+
+  .v2-win-card   { background: #1a1a1a; box-shadow: 0 12px 40px rgba(0,0,0,.5); }
+  .v2-win-level  { color: #444; }
+  .v2-win-badge  { background: linear-gradient(135deg, #c8a400, #7a6000); }
+  .v2-win-badge::before { border-color: #ffd700; }
+  .v2-win-badge * { color: #fff; }
+  .v2-win-badge .badge-icon  { color: #ffe066; }
+  .v2-win-title  { color: #eee; }
+  .v2-win-sub    { color: #555; }
+  .v2-win-moves  { color: #444; }
+  .v2-win-moves strong { color: #999; }
+  .v2-win-bp     { background: #c8a400; color: #000; }
+  .v2-win-bs     { background: #252525; color: #555; }
+
+
+  /* ════════════════════════════════════════
+     V3 — OCEAN (deep blue fail / teal win)
+  ════════════════════════════════════════ */
+  .v3-fail-card  { background: #0d1b2e; box-shadow: 0 12px 40px rgba(0,0,0,.5); }
+  .v3-fail-level { color: #2a4060; }
+  .v3-fail-badge { background: linear-gradient(135deg, #1565c0, #0a2e5a); }
+  .v3-fail-badge::before { border-color: #4fc3f7; }
+  .v3-fail-badge * { color: #fff; }
+  .v3-fail-badge .badge-icon  { color: #b3e5fc; }
+  .v3-fail-title { color: #b0bec5; }
+  .v3-fail-sub   { color: #37474f; }
+  .v3-fail-moves { color: #2a4060; }
+  .v3-fail-moves strong { color: #78909c; }
+  .v3-fail-bp    { background: #1565c0; color: #fff; }
+  .v3-fail-bs    { background: #0a1a2e; color: #37474f; }
+
+  .v3-win-card   { background: #051a14; box-shadow: 0 12px 40px rgba(0,0,0,.5); }
+  .v3-win-level  { color: #0d3d2a; }
+  .v3-win-badge  { background: linear-gradient(135deg, #00897b, #004d40); }
+  .v3-win-badge::before { border-color: #4db6ac; }
+  .v3-win-badge * { color: #fff; }
+  .v3-win-badge .badge-icon  { color: #b2dfdb; }
+  .v3-win-title  { color: #b2dfdb; }
+  .v3-win-sub    { color: #1b4a3e; }
+  .v3-win-moves  { color: #0d3d2a; }
+  .v3-win-moves strong { color: #4db6ac; }
+  .v3-win-bp     { background: #00897b; color: #fff; }
+  .v3-win-bs     { background: #031410; color: #1b4a3e; }
+
+
+  /* ════════════════════════════════════════
+     V4 — PASTEL / SOFT (rose + mint)
+  ════════════════════════════════════════ */
+  .v4-fail-card  { background: #fff8f8; box-shadow: 0 12px 40px rgba(200,100,100,.12); }
+  .v4-fail-level { color: #ddc0c0; }
+  .v4-fail-badge { background: linear-gradient(135deg, #f48fb1, #e91e63); }
+  .v4-fail-badge::before { border-color: #f48fb1; }
+  .v4-fail-badge * { color: #fff; }
+  .v4-fail-title { color: #5d3340; }
+  .v4-fail-sub   { color: #c49aaa; }
+  .v4-fail-moves { color: #ddc0c0; }
+  .v4-fail-moves strong { color: #8d5a6a; }
+  .v4-fail-bp    { background: #e91e63; color: #fff; }
+  .v4-fail-bs    { background: #fce4ec; color: #c49aaa; }
+
+  .v4-win-card   { background: #f5fff8; box-shadow: 0 12px 40px rgba(100,180,120,.1); }
+  .v4-win-level  { color: #b8ddc8; }
+  .v4-win-badge  { background: linear-gradient(135deg, #81c784, #388e3c); }
+  .v4-win-badge::before { border-color: #a5d6a7; }
+  .v4-win-badge * { color: #fff; }
+  .v4-win-title  { color: #2d5a3a; }
+  .v4-win-sub    { color: #8cb89a; }
+  .v4-win-moves  { color: #b8ddc8; }
+  .v4-win-moves strong { color: #4a8a5a; }
+  .v4-win-bp     { background: #388e3c; color: #fff; }
+  .v4-win-bs     { background: #e8f5e9; color: #8cb89a; }
+
+
+  /* ════════════════════════════════════════
+     V5 — NEON / CYBERPUNK
+  ════════════════════════════════════════ */
+  .v5-fail-card  { background: #0d0010; box-shadow: 0 12px 40px rgba(255,0,200,.15); }
+  .v5-fail-level { color: #3a003a; }
+  .v5-fail-badge { background: #0d0010; border: 2px solid #ff00cc; box-shadow: 0 0 20px rgba(255,0,200,.4), inset 0 0 20px rgba(255,0,200,.1); }
+  .v5-fail-badge::before { border-color: #ff00cc; opacity: 0.6; }
+  .v5-fail-badge .badge-icon  { color: #ff66dd; }
+  .v5-fail-badge .badge-word  { color: #ff00cc; text-shadow: 0 0 8px #ff00cc; }
+  .v5-fail-badge .badge-score { color: #fff; text-shadow: 0 0 8px #ff00cc; }
+  .v5-fail-title { color: #ff66dd; text-shadow: 0 0 10px rgba(255,0,200,.4); }
+  .v5-fail-sub   { color: #4a004a; }
+  .v5-fail-moves { color: #3a003a; }
+  .v5-fail-moves strong { color: #cc00aa; }
+  .v5-fail-bp    { background: #ff00cc; color: #000; box-shadow: 0 0 16px rgba(255,0,200,.5); }
+  .v5-fail-bs    { background: #1a001a; color: #4a004a; border: 1px solid #2a002a; }
+
+  .v5-win-card   { background: #000d0a; box-shadow: 0 12px 40px rgba(0,255,150,.15); }
+  .v5-win-level  { color: #003020; }
+  .v5-win-badge  { background: #000d0a; border: 2px solid #00ff9d; box-shadow: 0 0 20px rgba(0,255,150,.4), inset 0 0 20px rgba(0,255,150,.1); }
+  .v5-win-badge::before { border-color: #00ff9d; opacity: 0.6; }
+  .v5-win-badge .badge-icon  { color: #66ffcc; }
+  .v5-win-badge .badge-word  { color: #00ff9d; text-shadow: 0 0 8px #00ff9d; }
+  .v5-win-badge .badge-score { color: #fff; text-shadow: 0 0 8px #00ff9d; }
+  .v5-win-title  { color: #00ff9d; text-shadow: 0 0 10px rgba(0,255,150,.4); }
+  .v5-win-sub    { color: #003a20; }
+  .v5-win-moves  { color: #002a18; }
+  .v5-win-moves strong { color: #00cc7a; }
+  .v5-win-bp     { background: #00ff9d; color: #000; box-shadow: 0 0 16px rgba(0,255,150,.5); }
+  .v5-win-bs     { background: #001a0e; color: #003020; border: 1px solid #002a18; }
+
+
+  /* ════════════════════════════════════════
+     V6 — EARTH TONES (terracotta + sage)
+  ════════════════════════════════════════ */
+  .v6-fail-card  { background: #f5ede6; box-shadow: 0 12px 40px rgba(150,80,50,.12); }
+  .v6-fail-level { color: #c9a899; }
+  .v6-fail-badge { background: linear-gradient(135deg, #bf5631, #7a2e14); }
+  .v6-fail-badge::before { border-color: #bf5631; }
+  .v6-fail-badge * { color: #fff; }
+  .v6-fail-badge .badge-icon  { color: #ffd6c8; }
+  .v6-fail-title { color: #4a2015; }
+  .v6-fail-sub   { color: #c9a899; }
+  .v6-fail-moves { color: #d4bdb4; }
+  .v6-fail-moves strong { color: #7a4a38; }
+  .v6-fail-bp    { background: #bf5631; color: #fff; }
+  .v6-fail-bs    { background: #ede0d8; color: #c9a899; }
+
+  .v6-win-card   { background: #f0f4ef; box-shadow: 0 12px 40px rgba(80,120,70,.1); }
+  .v6-win-level  { color: #a8c4a0; }
+  .v6-win-badge  { background: linear-gradient(135deg, #7daa70, #3d6b33); }
+  .v6-win-badge::before { border-color: #7daa70; }
+  .v6-win-badge * { color: #fff; }
+  .v6-win-badge .badge-icon  { color: #d4edcc; }
+  .v6-win-title  { color: #243d1f; }
+  .v6-win-sub    { color: #8aab82; }
+  .v6-win-moves  { color: #a8c4a0; }
+  .v6-win-moves strong { color: #3d6b33; }
+  .v6-win-bp     { background: #4a7a40; color: #fff; }
+  .v6-win-bs     { background: #e4ece2; color: #8aab82; }
+
+
+  /* ════════════════════════════════════════
+     V7 — PURPLE / VIOLET
+  ════════════════════════════════════════ */
+  .v7-fail-card  { background: #110a1f; box-shadow: 0 12px 40px rgba(100,0,200,.2); }
+  .v7-fail-level { color: #2e1a4a; }
+  .v7-fail-badge { background: linear-gradient(135deg, #7b1fa2, #3d0066); }
+  .v7-fail-badge::before { border-color: #ce93d8; }
+  .v7-fail-badge * { color: #fff; }
+  .v7-fail-badge .badge-icon  { color: #f3e5f5; }
+  .v7-fail-title { color: #e1bee7; }
+  .v7-fail-sub   { color: #3d1a5a; }
+  .v7-fail-moves { color: #2e1a4a; }
+  .v7-fail-moves strong { color: #ab47bc; }
+  .v7-fail-bp    { background: linear-gradient(135deg, #8e24aa, #6a1b9a); color: #fff; }
+  .v7-fail-bs    { background: #1e0d30; color: #3d1a5a; }
+
+  .v7-win-card   { background: #110a1f; box-shadow: 0 12px 40px rgba(100,0,200,.2); }
+  .v7-win-level  { color: #2e1a4a; }
+  .v7-win-badge  { background: linear-gradient(135deg, #f9ca24, #b8860b); }
+  .v7-win-badge::before { border-color: #fff176; }
+  .v7-win-badge * { color: #1a0050; }
+  .v7-win-badge .badge-word  { color: #3d2800; }
+  .v7-win-title  { color: #f3e5f5; }
+  .v7-win-sub    { color: #3d1a5a; }
+  .v7-win-moves  { color: #2e1a4a; }
+  .v7-win-moves strong { color: #ce93d8; }
+  .v7-win-bp     { background: linear-gradient(135deg, #f9ca24, #f0932b); color: #1a0050; }
+  .v7-win-bs     { background: #1e0d30; color: #3d1a5a; }
+
+
+  /* ════════════════════════════════════════
+     V8 — WARM SUNSET (amber + peach card)
+  ════════════════════════════════════════ */
+  .v8-fail-card  { background: #2a1100; box-shadow: 0 12px 40px rgba(200,100,0,.2); }
+  .v8-fail-level { color: #4a2a0a; }
+  .v8-fail-badge { background: linear-gradient(135deg, #e65100, #bf360c); }
+  .v8-fail-badge::before { border-color: #ff8f00; }
+  .v8-fail-badge * { color: #fff; }
+  .v8-fail-badge .badge-icon  { color: #ffe0b2; }
+  .v8-fail-title { color: #ffccaa; }
+  .v8-fail-sub   { color: #5a3010; }
+  .v8-fail-moves { color: #4a2a0a; }
+  .v8-fail-moves strong { color: #ff8f00; }
+  .v8-fail-bp    { background: #e65100; color: #fff; }
+  .v8-fail-bs    { background: #1a0c00; color: #5a3010; }
+
+  .v8-win-card   { background: #fff8f0; box-shadow: 0 12px 40px rgba(200,130,0,.12); }
+  .v8-win-level  { color: #d4b090; }
+  .v8-win-badge  { background: linear-gradient(135deg, #ffb300, #e65100); }
+  .v8-win-badge::before { border-color: #ffd54f; }
+  .v8-win-badge * { color: #fff; }
+  .v8-win-badge .badge-icon  { color: #fff8e1; }
+  .v8-win-title  { color: #4a2800; }
+  .v8-win-sub    { color: #c4906a; }
+  .v8-win-moves  { color: #d4b090; }
+  .v8-win-moves strong { color: #7a4a20; }
+  .v8-win-bp     { background: linear-gradient(135deg, #ffb300, #ff6f00); color: #fff; }
+  .v8-win-bs     { background: #feeee0; color: #c4906a; }
+
+
+  /* ════════════════════════════════════════
+     V9 — ICE / FROST (pale blue-white)
+  ════════════════════════════════════════ */
+  .v9-fail-card  { background: linear-gradient(160deg, #e8f4fc, #d0eaf8); box-shadow: 0 12px 40px rgba(50,100,180,.12); }
+  .v9-fail-level { color: #90b8d8; }
+  .v9-fail-badge { background: linear-gradient(135deg, #546e7a, #263238); }
+  .v9-fail-badge::before { border-color: #80deea; }
+  .v9-fail-badge * { color: #fff; }
+  .v9-fail-badge .badge-icon  { color: #b2ebf2; }
+  .v9-fail-title { color: #1a3a50; }
+  .v9-fail-sub   { color: #7aabcc; }
+  .v9-fail-moves { color: #90b8d8; }
+  .v9-fail-moves strong { color: #2e6080; }
+  .v9-fail-bp    { background: #37474f; color: #e0f7fa; }
+  .v9-fail-bs    { background: rgba(255,255,255,.5); color: #7aabcc; border: 1px solid rgba(255,255,255,.8); }
+
+  .v9-win-card   { background: linear-gradient(160deg, #e0f7fa, #b2ebf2); box-shadow: 0 12px 40px rgba(0,160,200,.12); }
+  .v9-win-level  { color: #80cbc4; }
+  .v9-win-badge  { background: linear-gradient(135deg, #00acc1, #006064); }
+  .v9-win-badge::before { border-color: #80deea; }
+  .v9-win-badge * { color: #fff; }
+  .v9-win-badge .badge-icon  { color: #e0f7fa; }
+  .v9-win-title  { color: #004d5a; }
+  .v9-win-sub    { color: #5abccf; }
+  .v9-win-moves  { color: #80cbc4; }
+  .v9-win-moves strong { color: #00838f; }
+  .v9-win-bp     { background: #00838f; color: #fff; }
+  .v9-win-bs     { background: rgba(255,255,255,.5); color: #5abccf; border: 1px solid rgba(255,255,255,.8); }
+
+
+  /* ════════════════════════════════════════
+     V10 — MONOCHROME (pure B&W)
+  ════════════════════════════════════════ */
+  .v10-fail-card  { background: #fff; box-shadow: 0 12px 40px rgba(0,0,0,.15); }
+  .v10-fail-level { color: #bbb; }
+  .v10-fail-badge { background: #111; }
+  .v10-fail-badge::before { border-color: #333; opacity: 1; }
+  .v10-fail-badge * { color: #fff; }
+  .v10-fail-title { color: #111; }
+  .v10-fail-sub   { color: #bbb; }
+  .v10-fail-moves { color: #ccc; }
+  .v10-fail-moves strong { color: #444; }
+  .v10-fail-bp    { background: #111; color: #fff; }
+  .v10-fail-bs    { background: #f0f0f0; color: #aaa; }
+
+  .v10-win-card   { background: #111; box-shadow: 0 12px 40px rgba(0,0,0,.5); }
+  .v10-win-level  { color: #444; }
+  .v10-win-badge  { background: #fff; }
+  .v10-win-badge::before { border-color: #888; opacity: 1; }
+  .v10-win-badge .badge-icon  { color: #111; }
+  .v10-win-badge .badge-word  { color: #111; }
+  .v10-win-badge .badge-score { color: #111; }
+  .v10-win-title  { color: #eee; }
+  .v10-win-sub    { color: #444; }
+  .v10-win-moves  { color: #333; }
+  .v10-win-moves strong { color: #aaa; }
+  .v10-win-bp     { background: #fff; color: #111; }
+  .v10-win-bs     { background: #1e1e1e; color: #444; }
+</style>
+</head>
+<body>
+
+<h1>#5 Badge/Medal — Color Varieties</h1>
+<p class="subtitle">10 palettes · each showing fail + win side by side</p>
+
+<div class="gallery">
+
+  <!-- V1 ORIGINAL -->
+  <div class="variety">
+    <div class="variety-label"><span>V1</span> Original (reference)</div>
+    <div class="pair">
+      <div class="card-wrap">
+        <div class="state-lbl">✗ fail</div>
+        <div class="card v1-fail-card">
+          <div class="level-tag v1-fail-level">Level 7</div>
+          <div class="badge v1-fail-badge">
+            <div class="badge-icon">💀</div>
+            <div class="badge-word">Failed</div>
+            <div class="badge-score">47 pts</div>
+          </div>
+          <div class="card-title v1-fail-title">Out of Moves</div>
+          <div class="card-sub v1-fail-sub">Forest Frenzy</div>
+          <div class="card-moves v1-fail-moves">Used <strong>6 of 6</strong> moves</div>
+          <div class="btns">
+            <button class="btn-p v1-fail-bp">Try Again</button>
+            <button class="btn-s v1-fail-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-wrap">
+        <div class="state-lbl">✓ win</div>
+        <div class="card v1-win-card">
+          <div class="level-tag v1-win-level">Level 7</div>
+          <div class="badge v1-win-badge">
+            <div class="badge-icon">🏆</div>
+            <div class="badge-word">Cleared</div>
+            <div class="badge-score">128 pts</div>
+          </div>
+          <div class="card-title v1-win-title">Level Complete!</div>
+          <div class="card-sub v1-win-sub">Forest Frenzy</div>
+          <div class="card-moves v1-win-moves"><strong>2 moves</strong> remaining</div>
+          <div class="btns">
+            <button class="btn-p v1-win-bp">Next Level</button>
+            <button class="btn-s v1-win-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <hr style="width:100%;max-width:500px">
+
+  <!-- V2 DARK NOIR -->
+  <div class="variety">
+    <div class="variety-label"><span>V2</span> Dark Noir</div>
+    <div class="pair">
+      <div class="card-wrap">
+        <div class="state-lbl">✗ fail</div>
+        <div class="card v2-fail-card">
+          <div class="level-tag v2-fail-level">Level 7</div>
+          <div class="badge v2-fail-badge">
+            <div class="badge-icon">💀</div>
+            <div class="badge-word">Failed</div>
+            <div class="badge-score">47 pts</div>
+          </div>
+          <div class="card-title v2-fail-title">Out of Moves</div>
+          <div class="card-sub v2-fail-sub">Forest Frenzy</div>
+          <div class="card-moves v2-fail-moves">Used <strong>6 of 6</strong> moves</div>
+          <div class="btns">
+            <button class="btn-p v2-fail-bp">Try Again</button>
+            <button class="btn-s v2-fail-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-wrap">
+        <div class="state-lbl">✓ win</div>
+        <div class="card v2-win-card">
+          <div class="level-tag v2-win-level">Level 7</div>
+          <div class="badge v2-win-badge">
+            <div class="badge-icon">🏆</div>
+            <div class="badge-word">Cleared</div>
+            <div class="badge-score">128 pts</div>
+          </div>
+          <div class="card-title v2-win-title">Level Complete!</div>
+          <div class="card-sub v2-win-sub">Forest Frenzy</div>
+          <div class="card-moves v2-win-moves"><strong>2 moves</strong> remaining</div>
+          <div class="btns">
+            <button class="btn-p v2-win-bp">Next Level</button>
+            <button class="btn-s v2-win-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <hr style="width:100%;max-width:500px">
+
+  <!-- V3 OCEAN -->
+  <div class="variety">
+    <div class="variety-label"><span>V3</span> Ocean</div>
+    <div class="pair">
+      <div class="card-wrap">
+        <div class="state-lbl">✗ fail</div>
+        <div class="card v3-fail-card">
+          <div class="level-tag v3-fail-level">Level 7</div>
+          <div class="badge v3-fail-badge">
+            <div class="badge-icon">💀</div>
+            <div class="badge-word">Failed</div>
+            <div class="badge-score">47 pts</div>
+          </div>
+          <div class="card-title v3-fail-title">Out of Moves</div>
+          <div class="card-sub v3-fail-sub">Forest Frenzy</div>
+          <div class="card-moves v3-fail-moves">Used <strong>6 of 6</strong> moves</div>
+          <div class="btns">
+            <button class="btn-p v3-fail-bp">Try Again</button>
+            <button class="btn-s v3-fail-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-wrap">
+        <div class="state-lbl">✓ win</div>
+        <div class="card v3-win-card">
+          <div class="level-tag v3-win-level">Level 7</div>
+          <div class="badge v3-win-badge">
+            <div class="badge-icon">🏆</div>
+            <div class="badge-word">Cleared</div>
+            <div class="badge-score">128 pts</div>
+          </div>
+          <div class="card-title v3-win-title">Level Complete!</div>
+          <div class="card-sub v3-win-sub">Forest Frenzy</div>
+          <div class="card-moves v3-win-moves"><strong>2 moves</strong> remaining</div>
+          <div class="btns">
+            <button class="btn-p v3-win-bp">Next Level</button>
+            <button class="btn-s v3-win-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <hr style="width:100%;max-width:500px">
+
+  <!-- V4 PASTEL -->
+  <div class="variety">
+    <div class="variety-label"><span>V4</span> Pastel / Soft</div>
+    <div class="pair">
+      <div class="card-wrap">
+        <div class="state-lbl">✗ fail</div>
+        <div class="card v4-fail-card">
+          <div class="level-tag v4-fail-level">Level 7</div>
+          <div class="badge v4-fail-badge">
+            <div class="badge-icon">💀</div>
+            <div class="badge-word">Failed</div>
+            <div class="badge-score">47 pts</div>
+          </div>
+          <div class="card-title v4-fail-title">Out of Moves</div>
+          <div class="card-sub v4-fail-sub">Forest Frenzy</div>
+          <div class="card-moves v4-fail-moves">Used <strong>6 of 6</strong> moves</div>
+          <div class="btns">
+            <button class="btn-p v4-fail-bp">Try Again</button>
+            <button class="btn-s v4-fail-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-wrap">
+        <div class="state-lbl">✓ win</div>
+        <div class="card v4-win-card">
+          <div class="level-tag v4-win-level">Level 7</div>
+          <div class="badge v4-win-badge">
+            <div class="badge-icon">🏆</div>
+            <div class="badge-word">Cleared</div>
+            <div class="badge-score">128 pts</div>
+          </div>
+          <div class="card-title v4-win-title">Level Complete!</div>
+          <div class="card-sub v4-win-sub">Forest Frenzy</div>
+          <div class="card-moves v4-win-moves"><strong>2 moves</strong> remaining</div>
+          <div class="btns">
+            <button class="btn-p v4-win-bp">Next Level</button>
+            <button class="btn-s v4-win-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <hr style="width:100%;max-width:500px">
+
+  <!-- V5 NEON -->
+  <div class="variety">
+    <div class="variety-label"><span>V5</span> Neon / Cyberpunk</div>
+    <div class="pair">
+      <div class="card-wrap">
+        <div class="state-lbl">✗ fail</div>
+        <div class="card v5-fail-card">
+          <div class="level-tag v5-fail-level">Level 7</div>
+          <div class="badge v5-fail-badge">
+            <div class="badge-icon">💀</div>
+            <div class="badge-word">Failed</div>
+            <div class="badge-score">47 pts</div>
+          </div>
+          <div class="card-title v5-fail-title">Out of Moves</div>
+          <div class="card-sub v5-fail-sub">Forest Frenzy</div>
+          <div class="card-moves v5-fail-moves">Used <strong>6 of 6</strong> moves</div>
+          <div class="btns">
+            <button class="btn-p v5-fail-bp">Try Again</button>
+            <button class="btn-s v5-fail-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-wrap">
+        <div class="state-lbl">✓ win</div>
+        <div class="card v5-win-card">
+          <div class="level-tag v5-win-level">Level 7</div>
+          <div class="badge v5-win-badge">
+            <div class="badge-icon">🏆</div>
+            <div class="badge-word">Cleared</div>
+            <div class="badge-score">128 pts</div>
+          </div>
+          <div class="card-title v5-win-title">Level Complete!</div>
+          <div class="card-sub v5-win-sub">Forest Frenzy</div>
+          <div class="card-moves v5-win-moves"><strong>2 moves</strong> remaining</div>
+          <div class="btns">
+            <button class="btn-p v5-win-bp">Next Level</button>
+            <button class="btn-s v5-win-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <hr style="width:100%;max-width:500px">
+
+  <!-- V6 EARTH TONES -->
+  <div class="variety">
+    <div class="variety-label"><span>V6</span> Earth Tones</div>
+    <div class="pair">
+      <div class="card-wrap">
+        <div class="state-lbl">✗ fail</div>
+        <div class="card v6-fail-card">
+          <div class="level-tag v6-fail-level">Level 7</div>
+          <div class="badge v6-fail-badge">
+            <div class="badge-icon">💀</div>
+            <div class="badge-word">Failed</div>
+            <div class="badge-score">47 pts</div>
+          </div>
+          <div class="card-title v6-fail-title">Out of Moves</div>
+          <div class="card-sub v6-fail-sub">Forest Frenzy</div>
+          <div class="card-moves v6-fail-moves">Used <strong>6 of 6</strong> moves</div>
+          <div class="btns">
+            <button class="btn-p v6-fail-bp">Try Again</button>
+            <button class="btn-s v6-fail-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-wrap">
+        <div class="state-lbl">✓ win</div>
+        <div class="card v6-win-card">
+          <div class="level-tag v6-win-level">Level 7</div>
+          <div class="badge v6-win-badge">
+            <div class="badge-icon">🏆</div>
+            <div class="badge-word">Cleared</div>
+            <div class="badge-score">128 pts</div>
+          </div>
+          <div class="card-title v6-win-title">Level Complete!</div>
+          <div class="card-sub v6-win-sub">Forest Frenzy</div>
+          <div class="card-moves v6-win-moves"><strong>2 moves</strong> remaining</div>
+          <div class="btns">
+            <button class="btn-p v6-win-bp">Next Level</button>
+            <button class="btn-s v6-win-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <hr style="width:100%;max-width:500px">
+
+  <!-- V7 PURPLE -->
+  <div class="variety">
+    <div class="variety-label"><span>V7</span> Purple / Violet</div>
+    <div class="pair">
+      <div class="card-wrap">
+        <div class="state-lbl">✗ fail</div>
+        <div class="card v7-fail-card">
+          <div class="level-tag v7-fail-level">Level 7</div>
+          <div class="badge v7-fail-badge">
+            <div class="badge-icon">💀</div>
+            <div class="badge-word">Failed</div>
+            <div class="badge-score">47 pts</div>
+          </div>
+          <div class="card-title v7-fail-title">Out of Moves</div>
+          <div class="card-sub v7-fail-sub">Forest Frenzy</div>
+          <div class="card-moves v7-fail-moves">Used <strong>6 of 6</strong> moves</div>
+          <div class="btns">
+            <button class="btn-p v7-fail-bp">Try Again</button>
+            <button class="btn-s v7-fail-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-wrap">
+        <div class="state-lbl">✓ win</div>
+        <div class="card v7-win-card">
+          <div class="level-tag v7-win-level">Level 7</div>
+          <div class="badge v7-win-badge">
+            <div class="badge-icon">🏆</div>
+            <div class="badge-word">Cleared</div>
+            <div class="badge-score">128 pts</div>
+          </div>
+          <div class="card-title v7-win-title">Level Complete!</div>
+          <div class="card-sub v7-win-sub">Forest Frenzy</div>
+          <div class="card-moves v7-win-moves"><strong>2 moves</strong> remaining</div>
+          <div class="btns">
+            <button class="btn-p v7-win-bp">Next Level</button>
+            <button class="btn-s v7-win-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <hr style="width:100%;max-width:500px">
+
+  <!-- V8 WARM SUNSET -->
+  <div class="variety">
+    <div class="variety-label"><span>V8</span> Warm Sunset</div>
+    <div class="pair">
+      <div class="card-wrap">
+        <div class="state-lbl">✗ fail</div>
+        <div class="card v8-fail-card">
+          <div class="level-tag v8-fail-level">Level 7</div>
+          <div class="badge v8-fail-badge">
+            <div class="badge-icon">💀</div>
+            <div class="badge-word">Failed</div>
+            <div class="badge-score">47 pts</div>
+          </div>
+          <div class="card-title v8-fail-title">Out of Moves</div>
+          <div class="card-sub v8-fail-sub">Forest Frenzy</div>
+          <div class="card-moves v8-fail-moves">Used <strong>6 of 6</strong> moves</div>
+          <div class="btns">
+            <button class="btn-p v8-fail-bp">Try Again</button>
+            <button class="btn-s v8-fail-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-wrap">
+        <div class="state-lbl">✓ win</div>
+        <div class="card v8-win-card">
+          <div class="level-tag v8-win-level">Level 7</div>
+          <div class="badge v8-win-badge">
+            <div class="badge-icon">🏆</div>
+            <div class="badge-word">Cleared</div>
+            <div class="badge-score">128 pts</div>
+          </div>
+          <div class="card-title v8-win-title">Level Complete!</div>
+          <div class="card-sub v8-win-sub">Forest Frenzy</div>
+          <div class="card-moves v8-win-moves"><strong>2 moves</strong> remaining</div>
+          <div class="btns">
+            <button class="btn-p v8-win-bp">Next Level</button>
+            <button class="btn-s v8-win-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <hr style="width:100%;max-width:500px">
+
+  <!-- V9 ICE / FROST -->
+  <div class="variety">
+    <div class="variety-label"><span>V9</span> Ice / Frost</div>
+    <div class="pair">
+      <div class="card-wrap">
+        <div class="state-lbl">✗ fail</div>
+        <div class="card v9-fail-card">
+          <div class="level-tag v9-fail-level">Level 7</div>
+          <div class="badge v9-fail-badge">
+            <div class="badge-icon">💀</div>
+            <div class="badge-word">Failed</div>
+            <div class="badge-score">47 pts</div>
+          </div>
+          <div class="card-title v9-fail-title">Out of Moves</div>
+          <div class="card-sub v9-fail-sub">Forest Frenzy</div>
+          <div class="card-moves v9-fail-moves">Used <strong>6 of 6</strong> moves</div>
+          <div class="btns">
+            <button class="btn-p v9-fail-bp">Try Again</button>
+            <button class="btn-s v9-fail-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-wrap">
+        <div class="state-lbl">✓ win</div>
+        <div class="card v9-win-card">
+          <div class="level-tag v9-win-level">Level 7</div>
+          <div class="badge v9-win-badge">
+            <div class="badge-icon">🏆</div>
+            <div class="badge-word">Cleared</div>
+            <div class="badge-score">128 pts</div>
+          </div>
+          <div class="card-title v9-win-title">Level Complete!</div>
+          <div class="card-sub v9-win-sub">Forest Frenzy</div>
+          <div class="card-moves v9-win-moves"><strong>2 moves</strong> remaining</div>
+          <div class="btns">
+            <button class="btn-p v9-win-bp">Next Level</button>
+            <button class="btn-s v9-win-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <hr style="width:100%;max-width:500px">
+
+  <!-- V10 MONOCHROME -->
+  <div class="variety">
+    <div class="variety-label"><span>V10</span> Monochrome B&W</div>
+    <div class="pair">
+      <div class="card-wrap">
+        <div class="state-lbl">✗ fail</div>
+        <div class="card v10-fail-card">
+          <div class="level-tag v10-fail-level">Level 7</div>
+          <div class="badge v10-fail-badge">
+            <div class="badge-icon">💀</div>
+            <div class="badge-word">Failed</div>
+            <div class="badge-score">47 pts</div>
+          </div>
+          <div class="card-title v10-fail-title">Out of Moves</div>
+          <div class="card-sub v10-fail-sub">Forest Frenzy</div>
+          <div class="card-moves v10-fail-moves">Used <strong>6 of 6</strong> moves</div>
+          <div class="btns">
+            <button class="btn-p v10-fail-bp">Try Again</button>
+            <button class="btn-s v10-fail-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-wrap">
+        <div class="state-lbl">✓ win</div>
+        <div class="card v10-win-card">
+          <div class="level-tag v10-win-level">Level 7</div>
+          <div class="badge v10-win-badge">
+            <div class="badge-icon">🏆</div>
+            <div class="badge-word">Cleared</div>
+            <div class="badge-score">128 pts</div>
+          </div>
+          <div class="card-title v10-win-title">Level Complete!</div>
+          <div class="card-sub v10-win-sub">Forest Frenzy</div>
+          <div class="card-moves v10-win-moves"><strong>2 moves</strong> remaining</div>
+          <div class="btns">
+            <button class="btn-p v10-win-bp">Next Level</button>
+            <button class="btn-s v10-win-bs">Level Select</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /gallery -->
+</body>
+</html>

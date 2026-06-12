@@ -18,6 +18,12 @@ import {
   applyForcedChoice,
 } from '../game/engine';
 import { PAL, PAPER, PIECE_LABELS, PREY_POINTS } from '../game/constants';
+import { OrbToScore } from '../effects/OrbToScore';
+import { ScoreFlyout } from '../effects/ScoreFlyout';
+import Reanimated, {
+  useSharedValue, useAnimatedStyle,
+  withSequence, withTiming, Easing as REasing,
+} from 'react-native-reanimated';
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 const cellLabel = ([r, c]) => `${String.fromCharCode(65 + c)}${r + 1}`;
@@ -46,6 +52,15 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
   const sz = useCallback((n) => Math.round(n * scale), [scale]);
   const gridContainerWidth = Math.min(contentWidth, viewportWidth);
   const [gridPanelWidth, setGridPanelWidth] = useState(0);
+
+  const [orbFX, setOrbFX] = useState([]);
+  const orbFXId = useRef(0);
+  const [defeatFX, setDefeatFX] = useState([]);
+  const defeatFXId = useRef(0);
+  const gridRef = useRef(null);
+  const scoreBounceRef = useRef(null);
+  const scoreBoxRef = useRef(null);
+  const [scorePos, setScorePos] = useState({ x: 0, y: 0 });
 
   const popId = useRef(0);
   const popTimers = useRef([]);
@@ -98,6 +113,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     setFlashMsg(null);
     setShowHint(false);
     setPendingChoice(null);
+    setDefeatFX([]);
   };
 
   const undo = () => {
@@ -135,9 +151,18 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     const next = cloneGrid(currentDisplay);
     next[tr][tc] = ev.pred;
     next[fr][fc] = null;
+
+    // Score popup above predator cell + orb flying to score card
+    const pts = ev.pts || 0;
+    addPopup(tr, tc, pts);
+    gridRef.current?.measureCell(tr, tc).then(({ x, y }) => {
+      const id = `orb-${++orbFXId.current}`;
+      const arcSide = Math.random() < 0.5 ? 1 : -1;
+      setOrbFX((prev) => [...prev, { id, sx: x, sy: y, arcSide }]);
+    });
+
     setDisplayGrid(next);
     setCrunch({ r: tr, c: tc, color: PAL[ev.pred]?.glow || '#fff' });
-    addPopup(tr, tc, ev.pts, PAL[ev.prey]?.glow || '#ffd700');
     await delay(300);
     if (!mountedRef.current) return next;
     setCrunch(null);
@@ -180,7 +205,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     (async () => {
       let current = await animateJump(
         { ...option, kind: 'choose', pts: PREY_POINTS[option.prey] || 0 },
-        cloneGrid(choice.workingGrid)
+        cloneGrid(choice.workingGrid),
       );
       if (!mountedRef.current) return;
       showFlash(
@@ -418,13 +443,19 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     </View>
   ) : null, [showHint, sz, level]);
 
-  const statsNode = useMemo(() => (
+  const statsNode = (
     <View style={[styles.statsRow, { paddingHorizontal: sz(32), paddingBottom: sz(6), gap: sz(8) }]}>
-      <StatBox label="Score" value={score} color="#e8d9a8" scale={scale} />
+      <ScoreStatBox
+        ref={scoreBounceRef}
+        boxRef={scoreBoxRef}
+        value={score}
+        scale={scale}
+        onMeasure={setScorePos}
+      />
       <StatBox label="Moves" value={moves} color={moves <= 2 ? '#e07a6a' : '#e8d9a8'} scale={scale} />
       <StatBox label="Combo" value={maxCombo > 0 ? `x${maxCombo}` : '-'} color="#d4af37" scale={scale} />
     </View>
-  ), [score, moves, maxCombo, sz, scale]);
+  );
 
   const goalNode = useMemo(() => (
     <View style={[styles.goalCard, { marginHorizontal: sz(32), paddingHorizontal: sz(14), paddingVertical: sz(12) }]}>
@@ -507,6 +538,7 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
 
   const gridNode = (
     <Grid
+      ref={gridRef}
       grid={displayGrid}
       onCellPress={phase === 'choosing' ? handleChoiceTap : undefined}
       onDragStart={handleDragStart}
@@ -526,25 +558,54 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
     />
   );
 
+  const orbFXLayer = orbFX.map((fx) => (
+    <OrbToScore
+      key={fx.id}
+      sx={fx.sx}
+      sy={fx.sy}
+      tx={scorePos.x}
+      ty={scorePos.y}
+      arcSide={fx.arcSide}
+      onLand={() => {
+        scoreBounceRef.current?.triggerBounce();
+        setOrbFX((prev) => prev.filter((e) => e.id !== fx.id));
+      }}
+    />
+  ));
+
+  const defeatFXLayer = defeatFX.map((fx) => (
+    <ScoreFlyout
+      key={fx.id}
+      x={fx.x}
+      y={fx.y}
+      score={fx.score}
+      onDone={() => setDefeatFX((prev) => prev.filter((e) => e.id !== fx.id))}
+    />
+  ));
+
   const overlays = (
     <>
+      {orbFXLayer}
+      {defeatFXLayer}
       {phase === 'win' && (
-        <ResultOverlay>
+        <ResultOverlay variant="win">
           <View style={styles.overlayCard}>
-            <WinBurst />
-            <Text style={styles.overlayTitle}>Level Complete!</Text>
-            <Text style={[styles.overlayScore, { color: '#3a6b1f' }]}>{score} pts</Text>
+            <Text style={styles.overlayLevelTag}>LEVEL {level.id}</Text>
+            <WinBurst score={score} />
+            <Text style={[styles.overlayTitle, styles.overlayTitleWin]}>Level Complete!</Text>
+            <Text style={styles.overlaySubtitle}>{level.name}</Text>
+            <Text style={styles.overlayMoves}>
+              <Text style={styles.overlayMovesStrong}>{moves} move{moves !== 1 ? 's' : ''}</Text>
+              {' remaining'}
+            </Text>
             {maxCombo >= 2 && (
               <Text style={styles.overlayCombo}>Best chain: x{maxCombo}</Text>
             )}
             <View style={styles.overlayBtns}>
-              <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#8fe06f' }]} onPress={onComplete}>
-                <Text style={styles.overlayBtnText}>Next Level</Text>
+              <TouchableOpacity style={[styles.overlayBtn, styles.overlayBtnPrimaryWin]} onPress={onComplete}>
+                <Text style={[styles.overlayBtnText, styles.overlayBtnTextDark]}>Next Level</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#ffd98a' }]} onPress={reset}>
-                <Text style={styles.overlayBtnText}>Replay</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#efe3cb' }]} onPress={onBack}>
+              <TouchableOpacity style={[styles.overlayBtn, styles.overlayBtnSecondary]} onPress={onBack}>
                 <Text style={styles.overlayBtnText}>Level Select</Text>
               </TouchableOpacity>
             </View>
@@ -552,16 +613,22 @@ export default function GameScreen({ levelIndex, onBack, onComplete }) {
         </ResultOverlay>
       )}
       {phase === 'lose' && (
-        <ResultOverlay>
+        <ResultOverlay variant="lose">
           <View style={styles.overlayCard}>
-            <Text style={styles.overlayEmoji}>Stop</Text>
-            <Text style={styles.overlayTitle}>Out of Moves</Text>
-            <Text style={[styles.overlayScore, { color: PAPER.inkSoft }]}>{score} / {level.objective.target || '?'}</Text>
+            <Text style={styles.overlayLevelTag}>LEVEL {level.id}</Text>
+            <FailBadge score={score} />
+            <Text style={[styles.overlayTitle, styles.overlayTitleFail]}>Out of Moves</Text>
+            <Text style={styles.overlaySubtitle}>{level.name}</Text>
+            <Text style={styles.overlayMoves}>
+              {'Used '}
+              <Text style={styles.overlayMovesStrong}>{level.moves - moves} of {level.moves}</Text>
+              {' moves'}
+            </Text>
             <View style={styles.overlayBtns}>
-              <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#ff9a9a' }]} onPress={reset}>
-                <Text style={styles.overlayBtnText}>Try Again</Text>
+              <TouchableOpacity style={[styles.overlayBtn, styles.overlayBtnPrimaryFail]} onPress={reset}>
+                <Text style={[styles.overlayBtnText, styles.overlayBtnTextDark]}>Try Again</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.overlayBtn, { backgroundColor: '#efe3cb' }]} onPress={onBack}>
+              <TouchableOpacity style={[styles.overlayBtn, styles.overlayBtnSecondary]} onPress={onBack}>
                 <Text style={styles.overlayBtnText}>Level Select</Text>
               </TouchableOpacity>
             </View>
@@ -648,28 +715,69 @@ function FlashCard({ msg, color, style }) {
   );
 }
 
-function WinBurst() {
+function NeonBadge({ score, accentColor, bgColor, emoji, label, pulseMs = 900 }) {
   const scale = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const glow  = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scale, { toValue: 1, friction: 4, tension: 80, useNativeDriver: true }),
-      Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
-    ]).start();
+    Animated.spring(scale, { toValue: 1, friction: 5, tension: 70, useNativeDriver: true }).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, { toValue: 1, duration: pulseMs, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0.4, duration: pulseMs, useNativeDriver: true }),
+      ])
+    ).start();
   }, []);
+  const glowOpacity = glow.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] });
   return (
-    <Animated.View style={{ transform: [{ scale }], opacity, width: 80, height: 80, borderRadius: 40, backgroundColor: '#4caf50', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
-      <Text style={{ fontSize: 40, lineHeight: 48 }}>✓</Text>
+    <Animated.View style={{ transform: [{ scale }], marginBottom: 16, alignItems: 'center', justifyContent: 'center' }}>
+      {/* outer glow ring */}
+      <Animated.View style={{
+        position: 'absolute', width: 152, height: 152, borderRadius: 76,
+        borderWidth: 2.5, borderColor: accentColor, opacity: glowOpacity,
+        shadowColor: accentColor, shadowOpacity: 1, shadowRadius: 18, shadowOffset: { width: 0, height: 0 },
+      }} />
+      {/* dashed inner ring */}
+      <View style={{
+        position: 'absolute', width: 136, height: 136, borderRadius: 68,
+        borderWidth: 1.5, borderColor: accentColor, borderStyle: 'dashed', opacity: 0.35,
+      }} />
+      {/* badge circle */}
+      <View style={{
+        width: 124, height: 124, borderRadius: 62,
+        backgroundColor: bgColor, borderWidth: 2, borderColor: accentColor,
+        alignItems: 'center', justifyContent: 'center',
+        shadowColor: accentColor, shadowOpacity: 0.5, shadowRadius: 14, shadowOffset: { width: 0, height: 0 },
+      }}>
+        <Text style={{ fontSize: 32, lineHeight: 36 }}>{emoji}</Text>
+        <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: accentColor, marginTop: 1 }}>{label}</Text>
+        <Text style={{ fontSize: 20, fontWeight: '900', color: '#fff', marginTop: 2, letterSpacing: -0.5 }}>{score} pts</Text>
+      </View>
     </Animated.View>
   );
 }
 
+function WinBurst({ score }) {
+  return <NeonBadge score={score} accentColor="#00ff9d" bgColor="#000d0a" emoji="🏆" label="CLEARED" pulseMs={900} />;
+}
+
+function FailBadge({ score }) {
+  return <NeonBadge score={score} accentColor="#ff00cc" bgColor="#0d0010" emoji="💀" label="FAILED" pulseMs={800} />;
+}
+
+const SPARK_COUNT = 6;
+
 function ProgressBar({ pct, color }) {
   const fill = useRef(new Animated.Value(pct / 100)).current;
-  const glow = useRef(new Animated.Value(0)).current;
   const prevPct = useRef(pct);
+  const trackWidth = useRef(0);
+  // Each spark: { anim: Animated.Value (0→1), x, vy, vx }
+  const sparks = useRef([]);
+  const [sparkTick, setSparkTick] = useState(0);
 
   useEffect(() => {
+    const prev = prevPct.current;
+    prevPct.current = pct;
+
     Animated.timing(fill, {
       toValue: pct / 100,
       duration: 500,
@@ -677,15 +785,27 @@ function ProgressBar({ pct, color }) {
       useNativeDriver: false,
     }).start();
 
-    if (pct > prevPct.current) {
-      glow.setValue(0);
-      Animated.sequence([
-        Animated.timing(glow, { toValue: 1, duration: 160, useNativeDriver: true }),
-        Animated.timing(glow, { toValue: 0, duration: 520, useNativeDriver: true }),
-      ]).start();
+    if (pct > prev && trackWidth.current > 0) {
+      // Spawn sparks timed to when the fill head arrives (~500ms travel)
+      const arrivalDelay = 400;
+      setTimeout(() => {
+        const headX = (pct / 100) * trackWidth.current;
+        sparks.current = Array.from({ length: SPARK_COUNT }, () => {
+          const anim = new Animated.Value(0);
+          const angle = (Math.random() - 0.5) * Math.PI * 0.9; // spread ±80°
+          const speed = 18 + Math.random() * 20;
+          Animated.timing(anim, { toValue: 1, duration: 480 + Math.random() * 120, useNativeDriver: false }).start();
+          return {
+            anim,
+            startX: headX,
+            vx: Math.cos(angle) * speed,
+            vy: -(Math.abs(Math.sin(angle)) * speed + 8), // always launch upward
+          };
+        });
+        setSparkTick(t => t + 1);
+      }, arrivalDelay);
     }
-    prevPct.current = pct;
-  }, [pct, fill, glow]);
+  }, [pct, fill]);
 
   const widthPct = fill.interpolate({
     inputRange: [0, 1],
@@ -694,25 +814,39 @@ function ProgressBar({ pct, color }) {
   });
 
   return (
-    <View style={styles.progressTrack}>
-      <Animated.View
-        style={[
-          styles.progressFill,
-          { width: widthPct, backgroundColor: color },
-        ]}
-      >
-        <Animated.View
-          style={[
-            styles.progressGlow,
-            { backgroundColor: '#ffffff', opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0, 0.55] }) },
-          ]}
-        />
-      </Animated.View>
+    <View
+      style={styles.progressTrack}
+      onLayout={e => { trackWidth.current = e.nativeEvent.layout.width; }}
+    >
+      <Animated.View style={[styles.progressFill, { width: widthPct, backgroundColor: color }]} />
+      {/* sparks rendered above the track, overflow visible */}
+      {sparks.current.map((s, i) => {
+        // translate: x moves by vx*t, y moves by vy*t + gravity*(t^2)
+        const translateX = s.anim.interpolate({ inputRange: [0, 1], outputRange: [0, s.vx] });
+        const translateY = s.anim.interpolate({ inputRange: [0, 1], outputRange: [0, s.vy + 30] }); // +30 gravity arc
+        const opacity    = s.anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 1, 0] });
+        const scale      = s.anim.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 1, 0.3] });
+        return (
+          <Animated.View
+            key={`${sparkTick}-${i}`}
+            style={{
+              position: 'absolute',
+              left: s.startX - 2,
+              top: -2,
+              width: 4, height: 4,
+              borderRadius: 2,
+              backgroundColor: '#f5e090',
+              opacity,
+              transform: [{ translateX }, { translateY }, { scale }],
+            }}
+          />
+        );
+      })}
     </View>
   );
 }
 
-function ResultOverlay({ children }) {
+function ResultOverlay({ children, variant = 'win' }) {
   const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -724,14 +858,18 @@ function ResultOverlay({ children }) {
     }).start();
   }, [anim]);
 
-  const cardScale = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.85, 1],
-  });
+  const cardScale = anim.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1] });
+  const accentColor = variant === 'win' ? '#00ff9d' : '#ff00cc';
+  const cardBg = variant === 'win' ? 'rgba(0,18,10,0.97)' : 'rgba(12,0,16,0.97)';
 
   return (
     <Animated.View style={[styles.overlay, { opacity: anim }]}>
-      <Animated.View style={{ opacity: anim, transform: [{ scale: cardScale }] }}>
+      <Animated.View style={[styles.overlayCard, {
+        backgroundColor: cardBg,
+        borderColor: accentColor,
+        shadowColor: accentColor,
+        transform: [{ scale: cardScale }],
+      }]}>
         {children}
       </Animated.View>
     </Animated.View>
@@ -747,6 +885,55 @@ const StatBox = React.memo(function StatBox({ label, value, color, scale = 1 }) 
     </View>
   );
 });
+
+const ScoreStatBox = React.memo(React.forwardRef(function ScoreStatBox({ value, scale = 1, boxRef, onMeasure }, ref) {
+  const sz = (n) => Math.round(n * scale);
+  const bounceScale = useSharedValue(1);
+  const glowBorder  = useSharedValue(0);
+
+  React.useImperativeHandle(ref, () => ({
+    triggerBounce() {
+      bounceScale.value = withSequence(
+        withTiming(1.65, { duration: 120, easing: REasing.out(REasing.quad) }),
+        withTiming(1.0,  { duration: 220, easing: REasing.out(REasing.back(2)) })
+      );
+      glowBorder.value = withSequence(
+        withTiming(1, { duration: 80 }),
+        withTiming(0, { duration: 480 })
+      );
+    },
+  }));
+
+  const handleLayout = React.useCallback(() => {
+    boxRef?.current?.measureInWindow((x, y, w, h) => {
+      onMeasure?.({ x: x + w / 2, y: y + h / 2 });
+    });
+  }, [boxRef, onMeasure]);
+
+  const valueStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: bounceScale.value }],
+    color: bounceScale.value > 1.1 ? '#FFD700' : '#e8d9a8',
+  }));
+
+  const boxStyle = useAnimatedStyle(() => ({
+    borderColor: glowBorder.value > 0.01
+      ? `rgba(255,215,0,${(glowBorder.value * 0.75).toFixed(2)})`
+      : '#6a5224',
+  }));
+
+  return (
+    <Reanimated.View
+      ref={boxRef}
+      onLayout={handleLayout}
+      style={[styles.statBox, { paddingVertical: sz(9) }, boxStyle]}
+    >
+      <Reanimated.Text style={[styles.statValue, { fontSize: sz(20) }, valueStyle]}>
+        {value}
+      </Reanimated.Text>
+      <Text style={[styles.statLabel, { fontSize: sz(9) }]}>Score</Text>
+    </Reanimated.View>
+  );
+}));
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: 'transparent' },
@@ -897,11 +1084,11 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#2a2238',
     borderRadius: 999,
-    overflow: 'hidden',
+    overflow: 'visible',
     borderWidth: 1,
     borderColor: '#6a5224',
   },
-  progressFill: { height: '100%', borderRadius: 999, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 999 },
   progressGlow: {
     position: 'absolute',
     top: 0,
@@ -963,23 +1150,46 @@ const styles = StyleSheet.create({
   ctrlText: { color: '#d4af37', fontSize: 13, fontWeight: 'bold', letterSpacing: 1.5 },
   overlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(90,74,58,0.55)',
+    backgroundColor: 'rgba(0,0,0,0.72)',
     alignItems: 'center', justifyContent: 'center', zIndex: 100,
   },
   overlayCard: {
-    backgroundColor: PAPER.card, borderColor: '#ffffff', borderWidth: 5,
-    borderRadius: 24, padding: 32, alignItems: 'center', width: '85%', maxWidth: 300,
-    shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 16, shadowOffset: { width: 0, height: 10 }, elevation: 16,
+    borderRadius: 24, paddingVertical: 28, paddingHorizontal: 20, alignItems: 'center',
+    width: '92%', maxWidth: 360,
+    borderWidth: 1.5,
+    shadowOpacity: 0.7, shadowRadius: 24, shadowOffset: { width: 0, height: 0 }, elevation: 20,
   },
-  overlayEmoji: { fontSize: 30, fontWeight: 'bold', color: PAPER.ink },
-  overlayTitle: { fontSize: 24, fontWeight: 'bold', color: PAPER.ink, marginTop: 10, marginBottom: 4 },
-  overlayScore: { fontSize: 20, marginBottom: 4, fontWeight: 'bold' },
-  overlayCombo: { fontSize: 14, color: '#c98a2e', marginBottom: 8 },
-  overlayBtns: { width: '100%', gap: 8, marginTop: 18 },
+  overlayLevelTag: {
+    fontSize: 10, fontWeight: '700', letterSpacing: 3, color: '#444466',
+    marginBottom: 16, textTransform: 'uppercase',
+  },
+  overlayTitle: {
+    fontSize: 26, fontWeight: '800', letterSpacing: 0,
+    marginTop: 4, marginBottom: 4,
+  },
+  overlayTitleWin:  { color: '#00ff9d' },
+  overlayTitleFail: { color: '#ff00cc' },
+  overlaySubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.4)', marginBottom: 4 },
+  overlayMoves: { fontSize: 14, color: 'rgba(255,255,255,0.4)', marginBottom: 4 },
+  overlayMovesStrong: { color: 'rgba(255,255,255,0.75)', fontWeight: '700' },
+  overlayCombo: { fontSize: 13, color: 'rgba(0,255,157,0.5)', marginBottom: 4, letterSpacing: 0.5 },
+  overlayBtns: { width: '100%', gap: 10, marginTop: 20 },
   overlayBtn: {
-    borderRadius: 14, paddingVertical: 11, alignItems: 'center',
-    borderWidth: 3, borderColor: '#ffffff',
-    shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 5, shadowOffset: { width: 0, height: 3 }, elevation: 3,
+    borderRadius: 50, paddingVertical: 15, alignItems: 'center',
+    borderWidth: 0,
   },
-  overlayBtnText: { color: '#5a4a3a', fontSize: 14, fontWeight: 'bold' },
+  overlayBtnPrimaryWin: {
+    backgroundColor: '#00ff9d',
+    shadowColor: '#00ff9d', shadowOpacity: 0.55, shadowRadius: 14, shadowOffset: { width: 0, height: 0 }, elevation: 8,
+  },
+  overlayBtnPrimaryFail: {
+    backgroundColor: '#ff00cc',
+    shadowColor: '#ff00cc', shadowOpacity: 0.55, shadowRadius: 14, shadowOffset: { width: 0, height: 0 }, elevation: 8,
+  },
+  overlayBtnSecondary: {
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+  },
+  overlayBtnText: { color: 'rgba(255,255,255,0.6)', fontSize: 15, fontWeight: '700', letterSpacing: 0.5 },
+  overlayBtnTextDark: { color: '#000', fontSize: 15, fontWeight: '800' },
 });

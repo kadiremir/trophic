@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, useWindowDimensions, PanResponder, Animated, Easing, Platform } from 'react-native';
 import Cell from './Cell';
 import JumpSprite from './JumpSprite';
@@ -24,7 +24,7 @@ const getCellOrigin = (row, col, cellSize, boardOffsetX) => ({
   y: GRID_PADDING + row * (cellSize + CELL_GAP) + CELL_GAP / 2,
 });
 
-const Grid = React.memo(function Grid({
+const Grid = React.memo(React.forwardRef(function Grid({
   grid,
   onCellPress,
   onDragStart,
@@ -41,7 +41,7 @@ const Grid = React.memo(function Grid({
   crunchCell,
   scorePopups = [],
   containerWidth,
-}) {
+}, ref) {
   const { width } = useWindowDimensions();
   // containerWidth is passed by the desktop layout so we size relative to the
   // panel rather than the full window. Cap at 540 on desktop, 460 on mobile.
@@ -52,6 +52,28 @@ const Grid = React.memo(function Grid({
   const boardSize = GRID_SIZE * (cellSize + CELL_GAP);
   const boardOffsetX = Math.max(0, (gridWidth - boardSize) / 2);
   const boardRef = useRef(null);
+  const containerRef = useRef(null);
+  const cellSizeRef = useRef(cellSize);
+  const boardOffsetXRef = useRef(boardOffsetX);
+  cellSizeRef.current = cellSize;
+  boardOffsetXRef.current = boardOffsetX;
+
+  useImperativeHandle(ref, () => ({
+    // Measure cell center in window-space by using the container's measureInWindow
+    // plus the same getCellOrigin geometry. More reliable on web than measuring
+    // the inner board ref (whose alignSelf:center can mislead on some platforms).
+    measureCell: (r, c) => new Promise((resolve) => {
+      const cs = cellSizeRef.current;
+      const offsetX = boardOffsetXRef.current;
+      containerRef.current?.measureInWindow((cLeft, cTop) => {
+        resolve({
+          x: cLeft + GRID_PADDING + offsetX + c * (cs + CELL_GAP) + CELL_GAP / 2 + cs / 2,
+          y: cTop  + GRID_PADDING + r * (cs + CELL_GAP) + CELL_GAP / 2 + cs / 2,
+        });
+      });
+    }),
+  }), []);
+
   const dragStartPoint = useRef(null);
   const dragging = useRef(false);
   const dragSourceRef = useRef(null);
@@ -265,7 +287,7 @@ const Grid = React.memo(function Grid({
   });
 
   return (
-    <View style={[styles.container, { padding: GRID_PADDING }, containerWidth ? { width: containerWidth } : null]}>
+    <View ref={containerRef} style={[styles.container, { padding: GRID_PADDING }, containerWidth ? { width: containerWidth } : null]}>
       <View
         pointerEvents="none"
         style={[
@@ -426,7 +448,7 @@ const Grid = React.memo(function Grid({
       </View>
     </View>
   );
-});
+}));
 
 export default Grid;
 

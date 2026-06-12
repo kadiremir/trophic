@@ -1,13 +1,13 @@
 import React from 'react';
-import { View } from 'react-native';
+import { Image, View } from 'react-native';
 
 export default function HeroCharacter({ style }) {
   return (
-    <View style={[{ width: '100%', height: '100%' }, style]}>
-      <img
-        src="/trophic/dino.svg"
-        alt=""
-        style={{ width: '140%', height: '140%', objectFit: 'contain', display: 'block', transform: 'translate(-14%, -32%)' }}
+    <View style={[{ width: '100%', height: '100%', overflow: 'visible' }, style]}>
+      <Image
+        source={require('../../assets/dino.svg')}
+        style={{ width: '140%', height: '140%', marginLeft: '-20%', marginTop: '-45%' }}
+        resizeMode="contain"
       />
     </View>
   );

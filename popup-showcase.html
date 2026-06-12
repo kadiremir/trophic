@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Popup Design Showcase</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #fff;
+    padding: 32px 16px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+    color: #fff;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: #888;
+    font-size: 14px;
+    margin-bottom: 48px;
+  }
+
+  .design-section {
+    margin-bottom: 80px;
+  }
+
+  .design-label {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 20px;
+    padding-left: 4px;
+  }
+
+  .design-label span {
+    color: #a78bfa;
+    margin-right: 8px;
+  }
+
+  .pair {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .pair-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    text-align: center;
+    margin-bottom: 10px;
+    opacity: 0.5;
+  }
+
+  /* ── SHARED RESETS ── */
+  .popup-wrap { display: flex; flex-direction: column; align-items: center; }
+
+  /* ════════════════════════════════════════════
+     #1  FULL-SCREEN TAKEOVER
+  ════════════════════════════════════════════ */
+  .d1-screen {
+    width: 280px;
+    height: 480px;
+    border-radius: 24px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+  }
+  .d1-fail  { background: linear-gradient(160deg, #c0392b 0%, #7b1f1f 100%); }
+  .d1-win   { background: linear-gradient(160deg, #1a7a4a 0%, #0d3d25 100%); }
+
+  .d1-result {
+    font-size: 72px;
+    font-weight: 900;
+    letter-spacing: -3px;
+    text-align: center;
+    line-height: 1;
+    color: rgba(255,255,255,0.15);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    text-align: center;
+    user-select: none;
+  }
+  .d1-word {
+    font-size: 56px;
+    font-weight: 900;
+    letter-spacing: -2px;
+    color: #fff;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+    text-shadow: 0 4px 24px rgba(0,0,0,0.3);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .d1-sub {
+    font-size: 16px;
+    color: rgba(255,255,255,0.7);
+    text-align: center;
+    position: relative;
+    z-index: 2;
+    margin-bottom: 4px;
+  }
+  .d1-score {
+    font-size: 36px;
+    font-weight: 800;
+    color: #fff;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+  }
+  .d1-actions {
+    position: absolute;
+    bottom: 32px;
+    left: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 2;
+  }
+  .d1-btn-primary {
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
+    border: 1.5px solid rgba(255,255,255,0.35);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 14px;
+    border-radius: 14px;
+    text-align: center;
+    cursor: pointer;
+  }
+  .d1-btn-secondary {
+    color: rgba(255,255,255,0.6);
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  /* ════════════════════════════════════════════
+     #2  BOTTOM SHEET
+  ════════════════════════════════════════════ */
+  .d2-device {
+    width: 280px;
+    height: 480px;
+    border-radius: 24px;
+    overflow: hidden;
+    position: relative;
+    background: #f3ede5;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  .d2-bg-fail { background: #e8e0d8; }
+  .d2-bg-win  { background: #deeee8; }
+
+  .d2-game-peek {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.25;
+    font-size: 48px;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 16px;
+    align-content: center;
+  }
+  .d2-sheet {
+    background: #fff;
+    border-radius: 28px 28px 0 0;
+    padding: 12px 24px 28px;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.12);
+  }
+  .d2-handle {
+    width: 40px;
+    height: 4px;
+    background: #ddd;
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+  .d2-icon {
+    font-size: 44px;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .d2-word {
+    font-size: 28px;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .d2-fail-color { color: #c0392b; }
+  .d2-win-color  { color: #1a7a4a; }
+  .d2-meta {
+    font-size: 14px;
+    color: #888;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .d2-score-row {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+  }
+  .d2-stat { text-align: center; }
+  .d2-stat-val { font-size: 22px; font-weight: 800; color: #333; }
+  .d2-stat-lbl { font-size: 11px; color: #aaa; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+  .d2-btn-primary {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 10px;
+    cursor: pointer;
+    border: none;
+  }
+  .d2-btn-fail-primary  { background: #c0392b; color: #fff; }
+  .d2-btn-win-primary   { background: #1a7a4a; color: #fff; }
+  .d2-btn-secondary-sheet {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    border-radius: 50px;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    background: #f0ece8;
+    color: #555;
+    border: none;
+  }
+
+  /* ════════════════════════════════════════════
+     #3  HERO-ANIMAL CARD
+  ════════════════════════════════════════════ */
+  .d3-card {
+    width: 240px;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+  }
+  .d3-hero {
+    height: 170px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .d3-hero-fail { background: linear-gradient(180deg, #ff6b6b 0%, #e74c3c 100%); }
+  .d3-hero-win  { background: linear-gradient(180deg, #a8e6a3 0%, #27ae60 100%); }
+  .d3-mascot { font-size: 80px; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.2)); }
+  .d3-mascot-fail { transform: rotate(-15deg) translateY(6px); }
+  .d3-mascot-win  { transform: rotate(10deg) translateY(-4px); }
+  .d3-sparkles {
+    position: absolute;
+    top: 12px; left: 0; right: 0;
+    font-size: 20px;
+    text-align: center;
+    letter-spacing: 12px;
+    opacity: 0.6;
+  }
+  .d3-body {
+    background: #fff;
+    padding: 20px 20px 24px;
+  }
+  .d3-word {
+    font-size: 26px;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .d3-word-fail { color: #c0392b; }
+  .d3-word-win  { color: #1a7a4a; }
+  .d3-tagline { font-size: 13px; color: #999; text-align: center; margin-bottom: 16px; }
+  .d3-divider { height: 1px; background: #f0ece8; margin-bottom: 16px; }
+  .d3-stats {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+  }
+  .d3-stat { text-align: center; }
+  .d3-stat-val { font-size: 20px; font-weight: 800; color: #333; }
+  .d3-stat-lbl { font-size: 10px; color: #bbb; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 2px; }
+  .d3-btns { display: flex; flex-direction: column; gap: 8px; }
+  .d3-btn-p {
+    padding: 13px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    color: #fff;
+  }
+  .d3-btn-p-fail { background: #c0392b; }
+  .d3-btn-p-win  { background: #1a7a4a; }
+  .d3-btn-s {
+    padding: 13px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    background: #f5f0eb;
+    color: #666;
+    border: none;
+  }
+
+  /* ════════════════════════════════════════════
+     #4  STAT-GRID FOCUS
+  ════════════════════════════════════════════ */
+  .d4-card {
+    width: 260px;
+    background: #1c1c2e;
+    border-radius: 20px;
+    padding: 24px 20px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  }
+  .d4-result-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .d4-result-fail { color: #ff6b6b; }
+  .d4-result-win  { color: #6bffb8; }
+  .d4-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .d4-tile {
+    background: #2a2a40;
+    border-radius: 14px;
+    padding: 16px 12px;
+    text-align: center;
+  }
+  .d4-tile-val { font-size: 28px; font-weight: 800; color: #fff; line-height: 1; }
+  .d4-tile-lbl { font-size: 10px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-top: 6px; }
+  .d4-tile-wide {
+    grid-column: 1 / -1;
+  }
+  .d4-tile-accent-fail { border: 1.5px solid rgba(255,107,107,0.3); }
+  .d4-tile-accent-win  { border: 1.5px solid rgba(107,255,184,0.3); }
+  .d4-tile-val-fail { color: #ff6b6b; }
+  .d4-tile-val-win  { color: #6bffb8; }
+  .d4-btns { display: flex; gap: 10px; }
+  .d4-btn {
+    flex: 1;
+    padding: 13px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+  }
+  .d4-btn-p-fail { background: #ff6b6b; color: #1c1c2e; }
+  .d4-btn-p-win  { background: #6bffb8; color: #1c1c2e; }
+  .d4-btn-s { background: #2a2a40; color: #888; }
+
+  /* ════════════════════════════════════════════
+     #5  BADGE / MEDAL STAMP
+  ════════════════════════════════════════════ */
+  .d5-card {
+    width: 240px;
+    background: #fff;
+    border-radius: 24px;
+    padding: 28px 24px 24px;
+    text-align: center;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .d5-level {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #ccc;
+    margin-bottom: 20px;
+  }
+  .d5-badge {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .d5-badge::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 3px dashed;
+    opacity: 0.4;
+  }
+  .d5-badge-fail {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+  }
+  .d5-badge-fail::before { border-color: #c0392b; }
+  .d5-badge-win {
+    background: linear-gradient(135deg, #f9ca24, #f0932b);
+  }
+  .d5-badge-win::before { border-color: #f0932b; }
+
+  .d5-badge-icon { font-size: 32px; margin-bottom: 2px; }
+  .d5-badge-word {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.95);
+  }
+  .d5-badge-score {
+    font-size: 22px;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+  }
+
+  .d5-message {
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 4px;
+  }
+  .d5-submessage { font-size: 13px; color: #aaa; margin-bottom: 20px; }
+  .d5-moves { font-size: 13px; color: #bbb; margin-bottom: 20px; }
+  .d5-moves span { font-weight: 700; color: #555; }
+  .d5-btns { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+  .d5-btn-p {
+    padding: 13px;
+    border-radius: 50px;
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    color: #fff;
+  }
+  .d5-btn-p-fail { background: #c0392b; }
+  .d5-btn-p-win  { background: #f0932b; }
+  .d5-btn-s {
+    padding: 12px;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    background: #f5f5f5;
+    color: #888;
+    border: none;
+  }
+
+  /* ════════════════════════════════════════════
+     #6  ASYMMETRIC / DIAGONAL
+  ════════════════════════════════════════════ */
+  .d6-card {
+    width: 260px;
+    min-height: 340px;
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+  }
+  .d6-bg-fail { background: #1a0a0a; }
+  .d6-bg-win  { background: #0a1a0f; }
+
+  .d6-slash {
+    position: absolute;
+    top: -30px;
+    left: -40px;
+    width: 220px;
+    height: 220px;
+    border-radius: 20px;
+    transform: rotate(-20deg);
+  }
+  .d6-slash-fail { background: linear-gradient(135deg, #c0392b, #e74c3c); }
+  .d6-slash-win  { background: linear-gradient(135deg, #1a7a4a, #27ae60); }
+
+  .d6-word {
+    position: absolute;
+    top: 24px;
+    left: 20px;
+    font-size: 42px;
+    font-weight: 900;
+    color: rgba(255,255,255,0.95);
+    letter-spacing: -1.5px;
+    line-height: 1;
+    z-index: 2;
+    text-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .d6-level-tag {
+    position: absolute;
+    top: 24px;
+    right: 18px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.7);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    border-radius: 20px;
+    z-index: 2;
+  }
+  .d6-stats {
+    position: absolute;
+    bottom: 100px;
+    left: 20px;
+    z-index: 2;
+  }
+  .d6-stat-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .d6-stat-val { font-size: 28px; font-weight: 800; color: #fff; }
+  .d6-stat-lbl { font-size: 12px; color: rgba(255,255,255,0.5); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+  .d6-btns {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 2;
+  }
+  .d6-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+  }
+  .d6-btn-p-fail { background: #c0392b; color: #fff; }
+  .d6-btn-p-win  { background: #27ae60; color: #fff; }
+  .d6-btn-s { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
+
+  /* ════════════════════════════════════════════
+     #7  SPLIT LAYOUT
+  ════════════════════════════════════════════ */
+  .d7-card {
+    width: 460px;
+    height: 220px;
+    border-radius: 20px;
+    overflow: hidden;
+    display: flex;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+  }
+  .d7-left {
+    width: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .d7-left-fail { background: linear-gradient(160deg, #c0392b, #7b1f1f); }
+  .d7-left-win  { background: linear-gradient(160deg, #1a7a4a, #0d4a2e); }
+  .d7-left-icon { font-size: 48px; margin-bottom: 10px; }
+  .d7-left-word {
+    font-size: 26px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: -0.5px;
+  }
+  .d7-left-sub { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 4px; }
+
+  .d7-right {
+    flex: 1;
+    background: #fff;
+    padding: 24px 22px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .d7-right-stats { display: flex; gap: 20px; }
+  .d7-right-stat { }
+  .d7-right-stat-val { font-size: 26px; font-weight: 800; color: #1a1a2e; }
+  .d7-right-stat-lbl { font-size: 10px; color: #bbb; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+  .d7-btns { display: flex; gap: 8px; }
+  .d7-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+  }
+  .d7-btn-p-fail { background: #c0392b; color: #fff; }
+  .d7-btn-p-win  { background: #1a7a4a; color: #fff; }
+  .d7-btn-s { background: #f0ece8; color: #888; }
+
+  /* ════════════════════════════════════════════
+     #8  COMIC BURST
+  ════════════════════════════════════════════ */
+  .d8-scene {
+    width: 280px;
+    height: 360px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .d8-burst {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -55%);
+  }
+
+  .d8-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .d8-word {
+    font-size: 58px;
+    font-weight: 900;
+    letter-spacing: -2px;
+    line-height: 1;
+    text-align: center;
+    text-transform: uppercase;
+  }
+  .d8-word-fail { color: #1a0a0a; }
+  .d8-word-win  { color: #0a1a0a; }
+  .d8-score {
+    font-size: 18px;
+    font-weight: 800;
+    text-align: center;
+    margin-top: 4px;
+  }
+  .d8-score-fail { color: #7b1f1f; }
+  .d8-score-win  { color: #1a5c30; }
+
+  .d8-btns {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: 12px;
+  }
+  .d8-btn {
+    padding: 13px 22px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 800;
+    text-align: center;
+    cursor: pointer;
+    border: 3px solid;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .d8-btn-p-fail { background: #c0392b; color: #fff; border-color: #7b1f1f; }
+  .d8-btn-p-win  { background: #27ae60; color: #fff; border-color: #1a5c30; }
+  .d8-btn-s-fail { background: #fff; color: #c0392b; border-color: #c0392b; }
+  .d8-btn-s-win  { background: #fff; color: #27ae60; border-color: #27ae60; }
+
+  /* ════════════════════════════════════════════
+     #9  MINIMALIST TYPOGRAPHIC
+  ════════════════════════════════════════════ */
+  .d9-screen {
+    width: 280px;
+    height: 420px;
+    background: #fff;
+    border-radius: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 32px;
+    gap: 0;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.12);
+  }
+  .d9-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #ddd;
+    margin-bottom: 8px;
+    align-self: flex-start;
+  }
+  .d9-word {
+    font-size: 80px;
+    font-weight: 900;
+    letter-spacing: -4px;
+    line-height: 0.9;
+    align-self: flex-start;
+    margin-bottom: 12px;
+  }
+  .d9-word-fail { color: #1a0a0a; }
+  .d9-word-win  { color: #0a1a0a; }
+  .d9-score {
+    font-size: 22px;
+    font-weight: 300;
+    align-self: flex-start;
+    color: #999;
+    margin-bottom: 48px;
+  }
+  .d9-score strong { font-weight: 700; color: #333; }
+  .d9-btn-primary {
+    width: 100%;
+    padding: 16px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    margin-bottom: 16px;
+    color: #fff;
+  }
+  .d9-btn-p-fail { background: #1a0a0a; }
+  .d9-btn-p-win  { background: #0a1a0a; }
+  .d9-text-link {
+    font-size: 13px;
+    font-weight: 500;
+    color: #bbb;
+    text-decoration: underline;
+    cursor: pointer;
+    text-underline-offset: 3px;
+  }
+
+  /* ════════════════════════════════════════════
+     #10  COMPACT BANNER
+  ════════════════════════════════════════════ */
+  .d10-device {
+    width: 320px;
+    height: 420px;
+    border-radius: 24px;
+    overflow: hidden;
+    position: relative;
+    background: #f3ede5;
+    display: flex;
+    align-items: flex-end;
+  }
+  .d10-game {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px;
+  }
+  .d10-grid-row { display: flex; gap: 8px; }
+  .d10-cell {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+  .d10-banner {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 10px;
+  }
+  .d10-banner-fail {
+    background: #c0392b;
+  }
+  .d10-banner-win {
+    background: #1a7a4a;
+  }
+  .d10-banner-icon { font-size: 24px; }
+  .d10-banner-text { flex: 1; }
+  .d10-banner-word {
+    font-size: 15px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+  }
+  .d10-banner-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+    margin-top: 1px;
+  }
+  .d10-banner-btns { display: flex; gap: 8px; }
+  .d10-banner-btn {
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    white-space: nowrap;
+  }
+  .d10-banner-btn-p { background: rgba(255,255,255,0.25); color: #fff; }
+  .d10-banner-btn-s { background: rgba(0,0,0,0.2); color: rgba(255,255,255,0.75); }
+
+  /* ── DIVIDERS ── */
+  .divider {
+    border: none;
+    border-top: 1px solid #2a2a40;
+    margin: 0 0 80px;
+  }
+
+  /* ── WIDE ROW HELPER ── */
+  .pair-wide { justify-content: center; gap: 32px; }
+</style>
+</head>
+<body>
+
+<h1>Popup Design Showcase</h1>
+<p class="subtitle">10 directions · each showing fail + win state · scroll to compare</p>
+
+<!-- ══════════ #1 FULL-SCREEN TAKEOVER ══════════ -->
+<div class="design-section">
+  <div class="design-label"><span>#1</span> Full-Screen Takeover</div>
+  <div class="pair">
+
+    <div class="popup-wrap">
+      <div class="pair-label">✗ Fail</div>
+      <div class="d1-screen d1-fail">
+        <div class="d1-result">STOP STOP STOP</div>
+        <div class="d1-word">STOP</div>
+        <div class="d1-sub">Out of moves</div>
+        <div class="d1-score">47 pts</div>
+        <div class="d1-actions">
+          <div class="d1-btn-primary">Try Again</div>
+          <div class="d1-btn-secondary">Level Select</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-wrap">
+      <div class="pair-label">✓ Win</div>
+      <div class="d1-screen d1-win">
+        <div class="d1-result">NICE NICE NICE</div>
+        <div class="d1-word">NICE!</div>
+        <div class="d1-sub">Level complete</div>
+        <div class="d1-score">128 pts</div>
+        <div class="d1-actions">
+          <div class="d1-btn-primary">Next Level</div>
+          <div class="d1-btn-secondary">Level Select</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<hr class="divider">
+
+<!-- ══════════ #2 BOTTOM SHEET ══════════ -->
+<div class="design-section">
+  <div class="design-label"><span>#2</span> Bottom Sheet</div>
+  <div class="pair">
+
+    <div class="popup-wrap">
+      <div class="pair-label">✗ Fail</div>
+      <div class="d2-device d2-bg-fail">
+        <div class="d2-game-peek">🌱🐰🦊🐺🐻🌱🐰🦊🌱🐻🌱🐰🦊🐺🐻🌱</div>
+        <div class="d2-sheet">
+          <div class="d2-handle"></div>
+          <div class="d2-icon">😔</div>
+          <div class="d2-word d2-fail-color">Out of Moves</div>
+          <div class="d2-meta">Level 7 · Forest Frenzy</div>
+          <div class="d2-score-row">
+            <div class="d2-stat">
+              <div class="d2-stat-val">47</div>
+              <div class="d2-stat-lbl">Score</div>
+            </div>
+            <div class="d2-stat">
+              <div class="d2-stat-val">0/6</div>
+              <div class="d2-stat-lbl">Moves</div>
+            </div>
+            <div class="d2-stat">
+              <div class="d2-stat-val">Score</div>
+              <div class="d2-stat-lbl">Objective</div>
+            </div>
+          </div>
+          <button class="d2-btn-primary d2-btn-fail-primary">Try Again</button>
+          <button class="d2-btn-secondary-sheet">Level Select</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-wrap">
+      <div class="pair-label">✓ Win</div>
+      <div class="d2-device d2-bg-win">
+        <div class="d2-game-peek">🌱🐰🦊🐺🐻🌱🐰🦊🌱🐻🌱🐰🦊🐺🐻🌱</div>
+        <div class="d2-sheet">
+          <div class="d2-handle"></div>
+          <div class="d2-icon">🎉</div>
+          <div class="d2-word d2-win-color">Level Complete!</div>
+          <div class="d2-meta">Level 7 · Forest Frenzy</div>
+          <div class="d2-score-row">
+            <div class="d2-stat">
+              <div class="d2-stat-val">128</div>
+              <div class="d2-stat-lbl">Score</div>
+            </div>
+            <div class="d2-stat">
+              <div class="d2-stat-val">2/6</div>
+              <div class="d2-stat-lbl">Moves</div>
+            </div>
+            <div class="d2-stat">
+              <div class="d2-stat-val">Score</div>
+              <div class="d2-stat-lbl">Objective</div>
+            </div>
+          </div>
+          <button class="d2-btn-primary d2-btn-win-primary">Next Level</button>
+          <button class="d2-btn-secondary-sheet">Level Select</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<hr class="divider">
+
+<!-- ══════════ #3 HERO-ANIMAL CARD ══════════ -->
+<div class="design-section">
+  <div class="design-label"><span>#3</span> Hero-Animal Card</div>
+  <div class="pair">
+
+    <div class="popup-wrap">
+      <div class="pair-label">✗ Fail</div>
+      <div class="d3-card">
+        <div class="d3-hero d3-hero-fail">
+          <span class="d3-sparkles">✦ ✦ ✦</span>
+          <span class="d3-mascot d3-mascot-fail">🐺</span>
+        </div>
+        <div class="d3-body">
+          <div class="d3-word d3-word-fail">Out of Moves</div>
+          <div class="d3-tagline">The wolf escapes this time…</div>
+          <div class="d3-divider"></div>
+          <div class="d3-stats">
+            <div class="d3-stat">
+              <div class="d3-stat-val">47</div>
+              <div class="d3-stat-lbl">Score</div>
+            </div>
+            <div class="d3-stat">
+              <div class="d3-stat-val">0</div>
+              <div class="d3-stat-lbl">Moves Left</div>
+            </div>
+            <div class="d3-stat">
+              <div class="d3-stat-val">Lv 7</div>
+              <div class="d3-stat-lbl">Level</div>
+            </div>
+          </div>
+          <div class="d3-btns">
+            <button class="d3-btn-p d3-btn-p-fail">Try Again</button>
+            <button class="d3-btn-s">Level Select</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-wrap">
+      <div class="pair-label">✓ Win</div>
+      <div class="d3-card">
+        <div class="d3-hero d3-hero-win">
+          <span class="d3-sparkles">★ ★ ★</span>
+          <span class="d3-mascot d3-mascot-win">🦊</span>
+        </div>
+        <div class="d3-body">
+          <div class="d3-word d3-word-win">Level Complete!</div>
+          <div class="d3-tagline">Fox dominates the forest!</div>
+          <div class="d3-divider"></div>
+          <div class="d3-stats">
+            <div class="d3-stat">
+              <div class="d3-stat-val">128</div>
+              <div class="d3-stat-lbl">Score</div>
+            </div>
+            <div class="d3-stat">
+              <div class="d3-stat-val">2</div>
+              <div class="d3-stat-lbl">Moves Left</div>
+            </div>
+            <div class="d3-stat">
+              <div class="d3-stat-val">Lv 7</div>
+              <div class="d3-stat-lbl">Level</div>
+            </div>
+          </div>
+          <div class="d3-btns">
+            <button class="d3-btn-p d3-btn-p-win">Next Level</button>
+            <button class="d3-btn-s">Level Select</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<hr class="divider">
+
+<!-- ══════════ #4 STAT-GRID FOCUS ══════════ -->
+<div class="design-section">
+  <div class="design-label"><span>#4</span> Stat-Grid Focus</div>
+  <div class="pair">
+
+    <div class="popup-wrap">
+      <div class="pair-label">✗ Fail</div>
+      <div class="d4-card">
+        <div class="d4-result-label d4-result-fail">✕ Out of Moves</div>
+        <div class="d4-grid">
+          <div class="d4-tile d4-tile-accent-fail">
+            <div class="d4-tile-val d4-tile-val-fail">47</div>
+            <div class="d4-tile-lbl">Score</div>
+          </div>
+          <div class="d4-tile">
+            <div class="d4-tile-val">80</div>
+            <div class="d4-tile-lbl">Target</div>
+          </div>
+          <div class="d4-tile">
+            <div class="d4-tile-val">0</div>
+            <div class="d4-tile-lbl">Moves Left</div>
+          </div>
+          <div class="d4-tile">
+            <div class="d4-tile-val">7</div>
+            <div class="d4-tile-lbl">Level</div>
+          </div>
+          <div class="d4-tile d4-tile-wide">
+            <div class="d4-tile-val d4-tile-val-fail" style="font-size:18px">33 pts short</div>
+            <div class="d4-tile-lbl">Gap to target</div>
+          </div>
+        </div>
+        <div class="d4-btns">
+          <button class="d4-btn d4-btn-p-fail">Try Again</button>
+          <button class="d4-btn d4-btn-s">Menu</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-wrap">
+      <div class="pair-label">✓ Win</div>
+      <div class="d4-card">
+        <div class="d4-result-label d4-result-win">✓ Level Complete</div>
+        <div class="d4-grid">
+          <div class="d4-tile d4-tile-accent-win">
+            <div class="d4-tile-val d4-tile-val-win">128</div>
+            <div class="d4-tile-lbl">Score</div>
+          </div>
+          <div class="d4-tile">
+            <div class="d4-tile-val">80</div>
+            <div class="d4-tile-lbl">Target</div>
+          </div>
+          <div class="d4-tile">
+            <div class="d4-tile-val">2</div>
+            <div class="d4-tile-lbl">Moves Left</div>
+          </div>
+          <div class="d4-tile">
+            <div class="d4-tile-val">7</div>
+            <div class="d4-tile-lbl">Level</div>
+          </div>
+          <div class="d4-tile d4-tile-wide">
+            <div class="d4-tile-val d4-tile-val-win" style="font-size:18px">+48 pts over target</div>
+            <div class="d4-tile-lbl">Bonus</div>
+          </div>
+        </div>
+        <div class="d4-btns">
+          <button class="d4-btn d4-btn-p-win">Next Level</button>
+          <button class="d4-btn d4-btn-s">Menu</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<hr class="divider">
+
+<!-- ══════════ #5 BADGE / MEDAL STAMP ══════════ -->
+<div class="design-section">
+  <div class="design-label"><span>#5</span> Badge / Medal Stamp</div>
+  <div class="pair">
+
+    <div class="popup-wrap">
+      <div class="pair-label">✗ Fail</div>
+      <div class="d5-card">
+        <div class="d5-level">Level 7</div>
+        <div class="d5-badge d5-badge-fail">
+          <div class="d5-badge-icon">💀</div>
+          <div class="d5-badge-word">FAILED</div>
+          <div class="d5-badge-score">47 pts</div>
+        </div>
+        <div class="d5-message">Out of Moves</div>
+        <div class="d5-submessage">Forest Frenzy</div>
+        <div class="d5-moves">Used <span>6 of 6</span> moves</div>
+        <div class="d5-btns">
+          <button class="d5-btn-p d5-btn-p-fail">Try Again</button>
+          <button class="d5-btn-s">Level Select</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-wrap">
+      <div class="pair-label">✓ Win</div>
+      <div class="d5-card">
+        <div class="d5-level">Level 7</div>
+        <div class="d5-badge d5-badge-win">
+          <div class="d5-badge-icon">🏆</div>
+          <div class="d5-badge-word">CLEARED</div>
+          <div class="d5-badge-score">128 pts</div>
+        </div>
+        <div class="d5-message">Level Complete!</div>
+        <div class="d5-submessage">Forest Frenzy</div>
+        <div class="d5-moves"><span>2 moves</span> remaining</div>
+        <div class="d5-btns">
+          <button class="d5-btn-p d5-btn-p-win">Next Level</button>
+          <button class="d5-btn-s">Level Select</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<hr class="divider">
+
+<!-- ══════════ #6 ASYMMETRIC / DIAGONAL ══════════ -->
+<div class="design-section">
+  <div class="design-label"><span>#6</span> Asymmetric / Diagonal</div>
+  <div class="pair">
+
+    <div class="popup-wrap">
+      <div class="pair-label">✗ Fail</div>
+      <div class="d6-card d6-bg-fail" style="height:320px">
+        <div class="d6-slash d6-slash-fail"></div>
+        <div class="d6-word">STOP.</div>
+        <div class="d6-level-tag">LV 7</div>
+        <div class="d6-stats">
+          <div class="d6-stat-row">
+            <div class="d6-stat-val">47</div>
+            <div class="d6-stat-lbl">pts</div>
+          </div>
+          <div class="d6-stat-row">
+            <div class="d6-stat-val">0</div>
+            <div class="d6-stat-lbl">moves left</div>
+          </div>
+        </div>
+        <div class="d6-btns">
+          <button class="d6-btn d6-btn-p-fail">Try Again</button>
+          <button class="d6-btn d6-btn-s">Menu</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-wrap">
+      <div class="pair-label">✓ Win</div>
+      <div class="d6-card d6-bg-win" style="height:320px">
+        <div class="d6-slash d6-slash-win"></div>
+        <div class="d6-word">YES!</div>
+        <div class="d6-level-tag">LV 7</div>
+        <div class="d6-stats">
+          <div class="d6-stat-row">
+            <div class="d6-stat-val">128</div>
+            <div class="d6-stat-lbl">pts</div>
+          </div>
+          <div class="d6-stat-row">
+            <div class="d6-stat-val">2</div>
+            <div class="d6-stat-lbl">moves left</div>
+          </div>
+        </div>
+        <div class="d6-btns">
+          <button class="d6-btn d6-btn-p-win">Next Level</button>
+          <button class="d6-btn d6-btn-s">Menu</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<hr class="divider">
+
+<!-- ══════════ #7 SPLIT LAYOUT ══════════ -->
+<div class="design-section">
+  <div class="design-label"><span>#7</span> Split Layout (Landscape)</div>
+  <div class="pair" style="flex-direction:column; align-items:center;">
+
+    <div class="popup-wrap" style="margin-bottom:24px">
+      <div class="pair-label">✗ Fail</div>
+      <div class="d7-card">
+        <div class="d7-left d7-left-fail">
+          <div class="d7-left-icon">😤</div>
+          <div class="d7-left-word">STOP</div>
+          <div class="d7-left-sub">Out of moves</div>
+        </div>
+        <div class="d7-right">
+          <div>
+            <div style="font-size:11px;color:#ccc;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">Level 7 · Forest Frenzy</div>
+            <div class="d7-right-stats">
+              <div class="d7-right-stat">
+                <div class="d7-right-stat-val">47</div>
+                <div class="d7-right-stat-lbl">Score</div>
+              </div>
+              <div class="d7-right-stat">
+                <div class="d7-right-stat-val">80</div>
+                <div class="d7-right-stat-lbl">Target</div>
+              </div>
+              <div class="d7-right-stat">
+                <div class="d7-right-stat-val">0</div>
+                <div class="d7-right-stat-lbl">Moves Left</div>
+              </div>
+            </div>
+          </div>
+          <div class="d7-btns">
+            <button class="d7-btn d7-btn-p-fail">Try Again</button>
+            <button class="d7-btn d7-btn-s">Level Select</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-wrap">
+      <div class="pair-label">✓ Win</div>
+      <div class="d7-card">
+        <div class="d7-left d7-left-win">
+          <div class="d7-left-icon">🎉</div>
+          <div class="d7-left-word">NICE!</div>
+          <div class="d7-left-sub">Level complete</div>
+        </div>
+        <div class="d7-right">
+          <div>
+            <div style="font-size:11px;color:#ccc;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">Level 7 · Forest Frenzy</div>
+            <div class="d7-right-stats">
+              <div class="d7-right-stat">
+                <div class="d7-right-stat-val">128</div>
+                <div class="d7-right-stat-lbl">Score</div>
+              </div>
+              <div class="d7-right-stat">
+                <div class="d7-right-stat-val">80</div>
+                <div class="d7-right-stat-lbl">Target</div>
+              </div>
+              <div class="d7-right-stat">
+                <div class="d7-right-stat-val">2</div>
+                <div class="d7-right-stat-lbl">Moves Left</div>
+              </div>
+            </div>
+          </div>
+          <div class="d7-btns">
+            <button class="d7-btn d7-btn-p-win">Next Level</button>
+            <button class="d7-btn d7-btn-s">Level Select</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<hr class="divider">
+
+<!-- ══════════ #8 COMIC BURST ══════════ -->
+<div class="design-section">
+  <div class="design-label"><span>#8</span> Comic Burst</div>
+  <div class="pair">
+
+    <div class="popup-wrap">
+      <div class="pair-label">✗ Fail</div>
+      <div class="d8-scene">
+        <!-- Fail burst: jagged red star -->
+        <div class="d8-burst">
+          <svg width="260" height="200" viewBox="0 0 260 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="130,4 148,70 210,55 172,105 220,145 155,140 148,196 110,152 55,178 75,120 18,100 72,72 50,22 108,48" fill="#e74c3c" opacity="0.9"/>
+          </svg>
+        </div>
+        <div class="d8-content">
+          <div class="d8-word d8-word-fail">STOP!</div>
+          <div class="d8-score d8-score-fail">47 pts · 0 moves left</div>
+        </div>
+        <div class="d8-btns">
+          <button class="d8-btn d8-btn-p-fail">Try Again</button>
+          <button class="d8-btn d8-btn-s-fail">Menu</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-wrap">
+      <div class="pair-label">✓ Win</div>
+      <div class="d8-scene">
+        <!-- Win burst: spiky gold star -->
+        <div class="d8-burst">
+          <svg width="260" height="200" viewBox="0 0 260 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="130,4 143,62 196,42 168,90 222,110 168,118 185,176 136,148 115,196 100,148 48,168 72,118 18,100 70,82 52,32 106,58" fill="#f9ca24" opacity="0.9"/>
+          </svg>
+        </div>
+        <div class="d8-content">
+          <div class="d8-word d8-word-win">NICE!</div>
+          <div class="d8-score d8-score-win">128 pts · 2 moves left</div>
+        </div>
+        <div class="d8-btns">
+          <button class="d8-btn d8-btn-p-win">Next Level</button>
+          <button class="d8-btn d8-btn-s-win">Menu</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<hr class="divider">
+
+<!-- ══════════ #9 MINIMALIST TYPOGRAPHIC ══════════ -->
+<div class="design-section">
+  <div class="design-label"><span>#9</span> Minimalist Typographic</div>
+  <div class="pair">
+
+    <div class="popup-wrap">
+      <div class="pair-label">✗ Fail</div>
+      <div class="d9-screen">
+        <div class="d9-eyebrow">Level 7</div>
+        <div class="d9-word d9-word-fail">Stop.</div>
+        <div class="d9-score">Score <strong>47</strong> of 80</div>
+        <button class="d9-btn-primary d9-btn-p-fail">Try Again</button>
+        <span class="d9-text-link">Level Select</span>
+      </div>
+    </div>
+
+    <div class="popup-wrap">
+      <div class="pair-label">✓ Win</div>
+      <div class="d9-screen">
+        <div class="d9-eyebrow">Level 7</div>
+        <div class="d9-word d9-word-win">Nice!</div>
+        <div class="d9-score">Score <strong>128</strong> pts</div>
+        <button class="d9-btn-primary d9-btn-p-win">Next Level</button>
+        <span class="d9-text-link">Level Select</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+<hr class="divider">
+
+<!-- ══════════ #10 COMPACT BANNER ══════════ -->
+<div class="design-section">
+  <div class="design-label"><span>#10</span> Compact Banner</div>
+  <div class="pair">
+
+    <div class="popup-wrap">
+      <div class="pair-label">✗ Fail</div>
+      <div class="d10-device">
+        <div class="d10-game">
+          <div class="d10-grid-row">
+            <div class="d10-cell">🌱</div><div class="d10-cell">🐰</div><div class="d10-cell"></div><div class="d10-cell">🦊</div><div class="d10-cell">🌱</div><div class="d10-cell"></div>
+          </div>
+          <div class="d10-grid-row">
+            <div class="d10-cell"></div><div class="d10-cell">🌱</div><div class="d10-cell">🐺</div><div class="d10-cell"></div><div class="d10-cell">🐰</div><div class="d10-cell">🌱</div>
+          </div>
+          <div class="d10-grid-row">
+            <div class="d10-cell">🐻</div><div class="d10-cell"></div><div class="d10-cell">🌱</div><div class="d10-cell">🐰</div><div class="d10-cell"></div><div class="d10-cell">🦊</div>
+          </div>
+          <div class="d10-grid-row">
+            <div class="d10-cell">🌱</div><div class="d10-cell">🦊</div><div class="d10-cell"></div><div class="d10-cell">🌱</div><div class="d10-cell">🐺</div><div class="d10-cell"></div>
+          </div>
+          <div class="d10-grid-row">
+            <div class="d10-cell"></div><div class="d10-cell">🌱</div><div class="d10-cell">🐰</div><div class="d10-cell">🦊</div><div class="d10-cell">🌱</div><div class="d10-cell">🐻</div>
+          </div>
+        </div>
+        <div class="d10-banner d10-banner-fail">
+          <span class="d10-banner-icon">✕</span>
+          <div class="d10-banner-text">
+            <div class="d10-banner-word">Out of moves</div>
+            <div class="d10-banner-sub">47 pts · Level 7</div>
+          </div>
+          <div class="d10-banner-btns">
+            <button class="d10-banner-btn d10-banner-btn-p">Retry</button>
+            <button class="d10-banner-btn d10-banner-btn-s">Menu</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-wrap">
+      <div class="pair-label">✓ Win</div>
+      <div class="d10-device">
+        <div class="d10-game">
+          <div class="d10-grid-row">
+            <div class="d10-cell">🌱</div><div class="d10-cell"></div><div class="d10-cell">🌱</div><div class="d10-cell"></div><div class="d10-cell">🌱</div><div class="d10-cell"></div>
+          </div>
+          <div class="d10-grid-row">
+            <div class="d10-cell"></div><div class="d10-cell">🌱</div><div class="d10-cell"></div><div class="d10-cell">🌱</div><div class="d10-cell"></div><div class="d10-cell">🌱</div>
+          </div>
+          <div class="d10-grid-row">
+            <div class="d10-cell">🌱</div><div class="d10-cell"></div><div class="d10-cell">🌱</div><div class="d10-cell"></div><div class="d10-cell">🌱</div><div class="d10-cell"></div>
+          </div>
+          <div class="d10-grid-row">
+            <div class="d10-cell"></div><div class="d10-cell">🌱</div><div class="d10-cell"></div><div class="d10-cell">🌱</div><div class="d10-cell"></div><div class="d10-cell">🌱</div>
+          </div>
+          <div class="d10-grid-row">
+            <div class="d10-cell">🌱</div><div class="d10-cell"></div><div class="d10-cell">🌱</div><div class="d10-cell"></div><div class="d10-cell">🌱</div><div class="d10-cell"></div>
+          </div>
+        </div>
+        <div class="d10-banner d10-banner-win">
+          <span class="d10-banner-icon">✓</span>
+          <div class="d10-banner-text">
+            <div class="d10-banner-word">Level complete!</div>
+            <div class="d10-banner-sub">128 pts · Level 7</div>
+          </div>
+          <div class="d10-banner-btns">
+            <button class="d10-banner-btn d10-banner-btn-p">Next</button>
+            <button class="d10-banner-btn d10-banner-btn-s">Menu</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
